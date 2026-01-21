@@ -1,4 +1,4 @@
-export * from "./OpenDO.js";
-export { OpenDORegistry as Registry } from "./Registry.js";
-export * from "./Envelope.js";
-export * from "./RPC.js";
+export * from "./open-do.js";
+export { OpenDORegistry as Registry } from "./registry.js";
+export * from "./envelope.js";
+export * from "./rpc.js";
