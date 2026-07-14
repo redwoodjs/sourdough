@@ -1,9 +1,9 @@
 # `env` composition
 
 > [!NOTE]
-> `defineEnv`, the R2 binding descriptor, and the Node.js filesystem provider
-> are implemented. Durable Object composition and automatic injection into
-> Worker-style handler arguments remain design targets.
+> `defineEnv`, R2 composition, and local Node.js Durable Object composition are
+> implemented. Automatic injection into Worker-style handler arguments and
+> multiprocess Durable Object RPC remain design targets.
 
 Sourdough uses `env` as the composition root for application bindings. An env
 definition connects three things:
@@ -150,6 +150,10 @@ class Counter extends DurableObject {
     await this.ctx.storage.put("value", value);
     return value;
   }
+
+  async fetch() {
+    return new Response(String(await this.increment()));
+  }
 }
 
 const actors = nodeDurableObjects();
@@ -198,12 +202,12 @@ implementation. The shared `actors` value is the replaceable service provider.
 
 ## Durable Object Node.js defaults
 
-`nodeDurableObjects()` should default to:
+`nodeDurableObjects()` defaults to:
 
 - single-process execution;
 - SQLite persistence;
 - serialized execution per object;
-- alarms, hibernation, and RPC enabled; and
+- alarms, hibernation, and local RPC enabled; and
 - storage under `<cwd>/.sourdough/durable-object`.
 
 The default remains explicit because application code must select
@@ -239,7 +243,8 @@ provider files directly.
 ### Multiprocess Durable Object hosting
 
 Single-process operation is the safe default. Process isolation and parallelism
-are explicit:
+are explicit, but namespace RPC through the multiprocess host pool remains
+incomplete:
 
 ```typescript
 const actors = nodeDurableObjects({
@@ -274,9 +279,9 @@ export default {
 };
 ```
 
-`defineEnv` should preserve inferred binding types, keep binding names stable,
-and make provider lifecycle available to the runtime without exposing lifecycle
-methods on Cloudflare-facing binding objects.
+`defineEnv` preserves inferred binding types and keeps binding names stable.
+Provider lifecycle integration remains runtime work; provider shutdown methods
+must not appear on Cloudflare-facing binding objects.
 
 ## Defaults and overrides
 

@@ -66,9 +66,10 @@ export const env = defineEnv({
 await env.BUCKET.put("hello.txt", "Hello");
 ```
 
-The default Node.js filesystem path is `.sourdough/r2/BUCKET`. See
-[`env` composition](docs/env-composition.md) for explicit paths, custom
-providers, and the planned Durable Object composition API.
+The default Node.js filesystem path is `.sourdough/r2/BUCKET`. Durable Object
+namespaces use the same model through `durableObject()` and
+`nodeDurableObjects()`. See [`env` composition](docs/env-composition.md) for
+explicit paths, shared services, and custom providers.
 
 ## Repository layout
 

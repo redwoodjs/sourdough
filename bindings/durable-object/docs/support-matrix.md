@@ -2,7 +2,8 @@
 
 - **Tier:** 0
 - **Overall status:** Partial
-- **Subpath:** `@redwoodjs/sourdough/durable-object`
+- **Binding subpath:** `@redwoodjs/sourdough/durable-object`
+- **Node provider subpath:** `@redwoodjs/sourdough/durable-object/node`
 
 This document tracks the API and behavioral compatibility of
 `@redwoodjs/sourdough/durable-object` with Cloudflare's Durable Object API. The
@@ -26,8 +27,9 @@ not need a Sourdough-specific class name.
 | Area | Status | Current coverage |
 | --- | --- | --- |
 | `DurableObject` base class | Partial | Compatible constructor shape, `ctx`, `env`, `fetch`, `alarm`, and WebSocket handler hooks. |
-| Namespace and IDs | Partial | `idFromName`, `idFromString`, and `get` are available through `serve()`, but IDs currently use simplified string semantics. |
-| Stubs and routing | Partial | Fetch routing works locally and over Unix domain sockets. Full RPC capability semantics are not implemented. |
+| Namespace and IDs | Partial | `defineEnv` exposes `newUniqueId`, `idFromName`, `idFromString`, `get`, and `getByName` with namespace-bound `DurableObjectId` values. Jurisdiction and location-hint behavior is incomplete. |
+| Stubs and routing | Partial | Local stubs support `fetch` and typed application-method RPC. Unix-socket fetch routing works, but multiprocess RPC and full capability semantics are not implemented. |
+| `env` composition | Supported | `durableObject` registers a class against a shared `nodeDurableObjects` service and passes the completed env into local instances. |
 | Key-value storage | Partial | `get`, `put`, `delete`, `deleteAll`, `list`, and `transaction` are implemented with SQLite or memory storage. Options and transaction semantics need conformance work. |
 | SQLite storage | Partial | Per-object SQLite databases and basic prepared statements are implemented. The public SQL cursor API is not yet fully compatible. |
 | Concurrency | Partial | Requests are serialized per object and `blockConcurrencyWhile` is implemented. Input/output gate semantics need conformance tests. |
@@ -87,13 +89,14 @@ marked supported.
 
 ## Important known gaps
 
-1. Durable Object IDs are strings rather than fully compatible
-   `DurableObjectId` values.
-2. Namespace jurisdiction, location hints, and stub options are missing.
+1. Namespace jurisdiction, location hints, and several stub options are missing.
+2. Durable Object ID derivation and error behavior do not yet have Cloudflare
+   conformance coverage.
 3. Storage options, transaction behavior, durability guarantees, and error
    behavior do not yet have conformance coverage.
 4. SQLite cursors and several SQL metadata properties are missing.
-5. Workers RPC capability lifetime and serialization behavior are incomplete.
+5. Workers RPC capability lifetime, serialization, and multiprocess routing are
+   incomplete.
 6. WebSocket upgrade and hibernation behavior still depend on host-runtime
    adapters.
 7. The host pool provides single-machine placement, not Cloudflare's global

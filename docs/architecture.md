@@ -1,8 +1,9 @@
 # Binding module architecture
 
-Sourdough is a single package with one public subpath export per binding. An
-application installs `@redwoodjs/sourdough`, then imports only the binding
-modules it needs. Each module follows the
+Sourdough is a single package with one primary public subpath export per
+binding. Runtime-specific provider factories use a nested subpath such as
+`/r2/node` or `/durable-object/node`. An application installs
+`@redwoodjs/sourdough`, then imports only the binding modules it needs. Each module follows the
 [service adapter model](service-adapter-model.md): a Cloudflare-compatible API
 adapts a portable service contract implemented by one or more providers. The
 [`env` composition model](env-composition.md) defines how applications name and
@@ -32,6 +33,10 @@ The root `package.json` maps each binding directory to a public export:
     "./durable-object": {
       "types": "./dist/bindings/durable-object/src/index.d.ts",
       "import": "./dist/bindings/durable-object/src/index.js"
+    },
+    "./durable-object/node": {
+      "types": "./dist/bindings/durable-object/src/providers/node/index.d.ts",
+      "import": "./dist/bindings/durable-object/src/providers/node/index.js"
     }
   }
 }

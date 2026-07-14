@@ -13,6 +13,10 @@
       "types": "./dist/bindings/durable-object/src/index.d.ts",
       "import": "./dist/bindings/durable-object/src/index.js"
     },
+    "./durable-object/node": {
+      "types": "./dist/bindings/durable-object/src/providers/node/index.d.ts",
+      "import": "./dist/bindings/durable-object/src/providers/node/index.js"
+    },
     "./r2": {
       "types": "./dist/bindings/r2/src/index.d.ts",
       "import": "./dist/bindings/r2/src/index.js"

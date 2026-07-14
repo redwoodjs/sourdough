@@ -21,6 +21,7 @@ export class InstanceContainer {
   #webSockets = new Set<{ ws: WebSocket; tags: Set<string> }>();
   
   #alarmCheckTimer: any = null;
+  #closed = false;
 
   constructor(id: string, storage: DurableObjectStorage, env: any) {
     this.id = id;
@@ -162,10 +163,10 @@ export class InstanceContainer {
   }
   
   #startAlarmCheck(instance: DurableObject) {
-      if (this.#alarmCheckTimer) return; // Already running
+      if (this.#closed || this.#alarmCheckTimer) return; // Already running
       
       const check = async () => {
-          if (!this.instance) {
+          if (this.#closed || !this.instance) {
               // If evicted, stop checking? 
               // No, we technically need to check alarm to wake up.
               // But for now, let's assume if we are evicted, the Registry handles waking us up?
@@ -191,10 +192,13 @@ export class InstanceContainer {
               console.error("Alarm check error", e);
           }
           
-          this.#alarmCheckTimer = setTimeout(check, 1000);
+          if (!this.#closed) {
+              this.#alarmCheckTimer = setTimeout(check, 1000);
+              this.#alarmCheckTimer.unref?.();
+          }
       };
       
-      check();
+      void check();
   }
 
   canEvict(timeout: number): boolean {
@@ -216,6 +220,16 @@ export class InstanceContainer {
       this.instance = null;
       this.#state = null;
       // Stop internal alarm loop (we'll restart it on wake)
+      if (this.#alarmCheckTimer) {
+          clearTimeout(this.#alarmCheckTimer);
+          this.#alarmCheckTimer = null;
+      }
+  }
+
+  close() {
+      this.#closed = true;
+      this.instance = null;
+      this.#state = null;
       if (this.#alarmCheckTimer) {
           clearTimeout(this.#alarmCheckTimer);
           this.#alarmCheckTimer = null;
@@ -246,7 +260,12 @@ export class DurableObjectStateImpl implements DurableObjectState {
   }
 
   async blockConcurrencyWhile<T>(callback: () => Promise<T>): Promise<T> {
-    return (this.#queue = this.#queue.then(callback));
+    const result = this.#queue.then(callback);
+    this.#queue = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
   }
 
   waitUntil(promise: Promise<any>): void {

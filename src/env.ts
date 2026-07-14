@@ -3,6 +3,8 @@ const serviceDefinitionTag = Symbol("sourdough.service-definition");
 
 export interface BindingContext {
   readonly bindingName: string;
+  /** The stable env object while its bindings are being materialized. */
+  readonly env: Readonly<Record<string, unknown>>;
 }
 
 export interface BindingDefinition<Value> {
@@ -33,7 +35,7 @@ export function defineEnv<const Entries extends Record<string, unknown>>(
   const env: Record<string, unknown> = {};
   for (const [bindingName, entry] of Object.entries(entries)) {
     const value = isBindingDefinition(entry)
-      ? entry.create({ bindingName })
+      ? entry.create({ bindingName, env })
       : entry;
     Object.defineProperty(env, bindingName, {
       configurable: false,

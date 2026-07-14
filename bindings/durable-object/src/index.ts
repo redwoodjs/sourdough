@@ -1,3 +1,4 @@
+export * from "./binding.js";
 export * from "./durable-object/index.js";
 export { ClusterCoordinator } from "./coordinator.js";
 export * from "./durable-object/envelope.js";

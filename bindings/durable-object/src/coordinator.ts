@@ -4,6 +4,7 @@ import {
 import { spawn, type ChildProcess } from "node:child_process";
 import path from "node:path";
 import fs from "node:fs";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import {
   InstanceContainer,
@@ -146,6 +147,7 @@ class HostProcessHandle {
 
 export class ClusterCoordinator {
   #containers = new Map<string, InstanceContainer>(); // Local fallback
+  #loadingContainers = new Map<string, Promise<InstanceContainer>>();
   #hosts: HostProcessHandle[] = [];
   #options: { 
       hibernationTimeoutMs?: number; 
@@ -201,11 +203,12 @@ export class ClusterCoordinator {
 
   async get<T extends DurableObject>(
     id: string,
-    Ctor: DurableObjectConstructor<T>
+    Ctor: DurableObjectConstructor<T>,
+    namespace?: string,
   ): Promise<T> {
     // 1. Check if we should run locally (no host processes configured)
     if (this.#hosts.length === 0) {
-        return this.#getLocal(id, Ctor);
+        return this.#getLocal(id, Ctor, namespace);
     }
     
     // 2. Placement Logic (Hash ID to host)
@@ -252,30 +255,55 @@ export class ClusterCoordinator {
   
   async #getLocal<T extends DurableObject>(
     id: string,
-    Ctor: DurableObjectConstructor<T>
+    Ctor: DurableObjectConstructor<T>,
+    namespace?: string,
   ): Promise<T> {
-    let container = this.#containers.get(id);
+    const containerKey = namespace ? `${namespace}:${id}` : id;
+    let container = this.#containers.get(containerKey);
     if (!container) {
-        // Create storage
-        let storage: any; // Type inference or explicit import
-        if (this.#options.storageDir) {
-           const resolvedDir = path.resolve(process.cwd(), this.#options.storageDir);
-           if (!fs.existsSync(resolvedDir)) {
-             fs.mkdirSync(resolvedDir, { recursive: true });
-           }
-           const dbPath = path.join(resolvedDir, `${id}.sqlite`);
-           const Driver = await getSqliteDriver();
-           const db = new Driver(dbPath);
-           storage = new SqliteStorage(db);
-        } else {
-           storage = new InMemoryStorage();
-        }
+      let loading = this.#loadingContainers.get(containerKey);
+      if (!loading) {
+        loading = (async () => {
+          let storage: any;
+          if (this.#options.storageDir) {
+            const rootDir = path.resolve(process.cwd(), this.#options.storageDir);
+            const resolvedDir = namespace
+              ? path.join(rootDir, safePathSegment(namespace))
+              : rootDir;
+            if (!fs.existsSync(resolvedDir)) {
+              fs.mkdirSync(resolvedDir, { recursive: true });
+            }
+            const dbPath = path.join(
+              resolvedDir,
+              `${safePathSegment(id)}.sqlite`,
+            );
+            const Driver = await getSqliteDriver();
+            const db = new Driver(dbPath);
+            storage = new SqliteStorage(db);
+          } else {
+            storage = new InMemoryStorage();
+          }
 
-        // Updated signature: no 'this' passed
-        container = new InstanceContainer(id, storage, this.#options.env || {});
-        this.#containers.set(id, container);
+          const created = new InstanceContainer(
+            id,
+            storage,
+            this.#options.env || {},
+          );
+          this.#containers.set(containerKey, created);
+          return created;
+        })();
+        this.#loadingContainers.set(containerKey, loading);
+      }
+
+      try {
+        container = await loading;
+      } finally {
+        if (this.#loadingContainers.get(containerKey) === loading) {
+          this.#loadingContainers.delete(containerKey);
+        }
+      }
     }
-    
+
     // Register Ctor in case we need it for wakeup
     return (await container.getInstance(Ctor)) as T;
   }
@@ -300,7 +328,11 @@ export class ClusterCoordinator {
           clearInterval(this.#evictionInterval);
           this.#evictionInterval = null;
       }
+      for (const container of this.#containers.values()) {
+          container.close();
+      }
       this.#containers.clear();
+      this.#loadingContainers.clear();
       
       for (const host of this.#hosts) {
           try {
@@ -309,5 +341,11 @@ export class ClusterCoordinator {
       }
       this.#hosts = [];
   }
+}
+
+function safePathSegment(value: string): string {
+  return /^[A-Za-z0-9_-]+$/.test(value)
+    ? value
+    : createHash("sha256").update(value).digest("hex");
 }
 
