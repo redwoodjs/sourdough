@@ -1,0 +1,97 @@
+name: Benchmark
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: benchmark-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  compare:
+    name: Compare performance with base
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SOURDOUGH_BENCH_TIME: 750
+      SOURDOUGH_BENCH_WARMUP_TIME: 100
+      SOURDOUGH_BENCH_ROUNDS: 2
+
+    steps:
+      - name: Checkout proposed commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: head
+          fetch-depth: 1
+
+      - name: Checkout base commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          fetch-depth: 1
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: head/pnpm-lock.yaml
+
+      - name: Install proposed dependencies
+        working-directory: head
+        run: pnpm install --frozen-lockfile
+
+      - name: Install base dependencies
+        working-directory: base
+        run: pnpm install --frozen-lockfile
+
+      - name: Compare benchmarks
+        id: compare
+        continue-on-error: true
+        run: |
+          node head/benchmarks/run-comparison.mjs \
+            --base base \
+            --head head \
+            --base-sha '${{ github.event.pull_request.base.sha }}' \
+            --head-sha '${{ github.event.pull_request.head.sha }}' \
+            --pull-request '${{ github.event.pull_request.number }}' \
+            --repository '${{ github.repository }}' \
+            --run-id '${{ github.run_id }}' \
+            --run-attempt '${{ github.run_attempt }}' \
+            --output benchmark-results/result.json \
+            --report benchmark-results/report.md
+
+      - name: Add comparison to job summary
+        if: always()
+        run: |
+          if [[ -f benchmark-results/report.md ]]; then
+            cat benchmark-results/report.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Benchmark comparison did not produce a report.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload benchmark result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-result-${{ github.run_id }}
+          path: benchmark-results
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Enforce benchmark result
+        if: always()
+        run: |
+          if [[ '${{ steps.compare.outcome }}' != 'success' ]]; then
+            echo 'The benchmark comparison failed or found a performance regression.'
+            exit 1
+          fi

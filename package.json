@@ -35,7 +35,7 @@
     "README.md"
   ],
   "scripts": {
-    "bench": "vitest bench",
+    "bench": "vitest bench --run --no-file-parallelism --maxWorkers 1",
     "build": "rm -rf dist && tsc --project tsconfig.build.json",
     "prepack": "pnpm build",
     "test": "vitest run",

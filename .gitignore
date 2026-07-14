@@ -3,6 +3,7 @@ node_modules
 *.sock
 .test-storage*
 .bench-storage*
+benchmark-results
 .serve-test-storage*
 .storage
 .sourdough

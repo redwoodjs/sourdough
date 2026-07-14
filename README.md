@@ -104,7 +104,14 @@ corepack enable
 pnpm install
 pnpm typecheck
 pnpm test
+pnpm bench
 ```
+
+Every pull request compares its benchmarks with the base commit on the same
+runner. Historical results are published to
+[`redwoodjs/sourdough-benchmarks`](https://github.com/redwoodjs/sourdough-benchmarks).
+See the [benchmark conventions](benchmarks/README.md) for naming, thresholds,
+and regression policy.
 
 ## Independence and compatibility
 

@@ -1,0 +1,80 @@
+name: Publish benchmark results
+
+on:
+  workflow_run:
+    workflows: [Benchmark]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: benchmark-result-publisher
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout trusted publisher
+        uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Download benchmark artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: benchmark-result-${{ github.event.workflow_run.id }}
+          path: benchmark-artifact
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure result-repository deploy key
+        env:
+          DEPLOY_KEY: ${{ secrets.BENCHMARK_RESULTS_DEPLOY_KEY }}
+        run: |
+          test -n "$DEPLOY_KEY"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Checkout result repository
+        run: git clone git@github.com:redwoodjs/sourdough-benchmarks.git benchmark-store
+
+      - name: Validate and stage immutable result
+        id: publish
+        run: |
+          target=$(node benchmarks/publish-results.mjs \
+            --input benchmark-artifact/result.json \
+            --results-repository benchmark-store \
+            --run-id '${{ github.event.workflow_run.id }}' \
+            --head-sha '${{ github.event.workflow_run.head_sha }}' \
+            --pull-request '${{ github.event.workflow_run.pull_requests[0].number }}')
+          echo "target=$target" >> "$GITHUB_OUTPUT"
+          cd benchmark-store
+          git add "$target"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m "results: sourdough run ${{ github.event.workflow_run.id }}"
+
+      - name: Push result
+        working-directory: benchmark-store
+        run: |
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            sleep $((attempt * 2))
+          done
+          exit 1
+
+      - name: Add publication link
+        run: |
+          echo 'Published to [redwoodjs/sourdough-benchmarks](https://github.com/redwoodjs/sourdough-benchmarks/blob/main/${{ steps.publish.outputs.target }}).' >> "$GITHUB_STEP_SUMMARY"

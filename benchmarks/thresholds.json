@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "defaultMaxRegressionPercent": 10,
+  "overrides": {
+    "durable-object/node/coordinator-activate-in-memory": 20,
+    "durable-object/node/storage-sql-write": 25,
+    "r2/node/put-1-kib": 20
+  }
+}

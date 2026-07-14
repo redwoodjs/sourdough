@@ -20,6 +20,7 @@ Each binding lives at `bindings/<binding-name>/` and owns:
 ```text
 bindings/<binding-name>/
   README.md
+  bench/
   docs/
     support-matrix.md
   src/
@@ -50,8 +51,10 @@ A binding module must:
 4. keep runtime and provider details behind the binding adapter;
 5. avoid importing unrelated binding modules;
 6. export its public surface from its own `src/index.ts`;
-7. have a root-package subpath export; and
-8. add or update its row in `docs/support-matrix.md`.
+7. have a root-package subpath export;
+8. add or update its row in `docs/support-matrix.md`; and
+9. add stable adapter, provider, or scenario benchmarks under `bench/` for
+   performance-sensitive behavior.
 
 ## Internal boundaries
 
