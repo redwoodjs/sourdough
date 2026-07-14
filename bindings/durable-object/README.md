@@ -44,6 +44,7 @@ names should remain compatible.
 ## Documentation
 
 - [Support matrix](docs/support-matrix.md)
+- [`env` composition and Node.js defaults](../../docs/env-composition.md)
 - [Host process model](docs/host-process-model.md)
 - [Repository-wide support matrix](../../docs/support-matrix.md)
 

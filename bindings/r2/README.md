@@ -61,5 +61,6 @@ replaceable.
 ## Documentation
 
 - [R2 support matrix](docs/support-matrix.md)
+- [`env` composition and provider defaults](../../docs/env-composition.md)
 - [Service adapter model](../../docs/service-adapter-model.md)
 - [Repository-wide support matrix](../../docs/support-matrix.md)

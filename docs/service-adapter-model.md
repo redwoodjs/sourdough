@@ -74,6 +74,13 @@ The environment that executes application code and assembles bindings. Node.js
 24 is the first runtime; Nub is also a primary target. Other runtimes should be
 possible without redesigning each binding API.
 
+## Composition through `env`
+
+[`env` composition](env-composition.md) is where a named binding, its
+Cloudflare-compatible adapter, and a service provider are assembled. The
+resulting `env` exposes only binding objects to application code; provider
+configuration and lifecycle stay behind the runtime boundary.
+
 ## KV example
 
 Application code only sees the Cloudflare-compatible API:

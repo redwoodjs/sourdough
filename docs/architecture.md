@@ -4,7 +4,9 @@ Sourdough is a single package with one public subpath export per binding. An
 application installs `@redwoodjs/sourdough`, then imports only the binding
 modules it needs. Each module follows the
 [service adapter model](service-adapter-model.md): a Cloudflare-compatible API
-adapts a portable service contract implemented by one or more providers.
+adapts a portable service contract implemented by one or more providers. The
+[`env` composition model](env-composition.md) defines how applications name and
+wire those pieces together.
 
 ```typescript
 import { DurableObject } from "@redwoodjs/sourdough/durable-object";
