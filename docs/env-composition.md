@@ -1,8 +1,9 @@
 # `env` composition
 
 > [!NOTE]
-> This document defines the target configuration API. `defineEnv`, binding
-> descriptors, and the provider factories shown here are not implemented yet.
+> `defineEnv`, the R2 binding descriptor, and the Node.js filesystem provider
+> are implemented. Durable Object composition and automatic injection into
+> Worker-style handler arguments remain design targets.
 
 Sourdough uses `env` as the composition root for application bindings. An env
 definition connects three things:

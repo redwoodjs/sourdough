@@ -1,4 +1,5 @@
-export { R2Bucket } from "./binding.js";
+export { R2Bucket, r2 } from "./binding.js";
+export type { R2BindingOptions } from "./binding.js";
 export type {
   R2Service,
   R2ServiceGetOptions,

@@ -5,6 +5,7 @@ node_modules
 .bench-storage*
 .serve-test-storage*
 .storage
+.sourdough
 coverage
 dist
 test_output.txt

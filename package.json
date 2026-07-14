@@ -5,6 +5,10 @@
   "description": "Portable Cloudflare-compatible bindings for Node.js and Nub.",
   "type": "module",
   "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
     "./durable-object": {
       "types": "./dist/bindings/durable-object/src/index.d.ts",
       "import": "./dist/bindings/durable-object/src/index.js"

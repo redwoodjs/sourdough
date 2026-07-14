@@ -50,6 +50,26 @@ export class Counter extends DurableObject {
 }
 ```
 
+## Compose bindings on `env`
+
+```typescript
+import { defineEnv } from "@redwoodjs/sourdough";
+import { r2 } from "@redwoodjs/sourdough/r2";
+import { fileSystem } from "@redwoodjs/sourdough/r2/node";
+
+export const env = defineEnv({
+  BUCKET: r2({
+    service: fileSystem(),
+  }),
+});
+
+await env.BUCKET.put("hello.txt", "Hello");
+```
+
+The default Node.js filesystem path is `.sourdough/r2/BUCKET`. See
+[`env` composition](docs/env-composition.md) for explicit paths, custom
+providers, and the planned Durable Object composition API.
+
 ## Repository layout
 
 ```text

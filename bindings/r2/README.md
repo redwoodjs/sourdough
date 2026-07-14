@@ -6,29 +6,63 @@ contract and a first-party Node.js filesystem provider.
 > [!WARNING]
 > Sourdough is experimental and has not been published to npm.
 
-## Application API
-
-Application code uses the Cloudflare-facing binding:
+## Define the binding on `env`
 
 ```typescript
-import type { R2Bucket } from "@redwoodjs/sourdough/r2";
+import { defineEnv } from "@redwoodjs/sourdough";
+import { r2 } from "@redwoodjs/sourdough/r2";
+import { fileSystem } from "@redwoodjs/sourdough/r2/node";
 
-interface Env {
-  BUCKET: R2Bucket;
-}
+export const env = defineEnv({
+  BUCKET: r2({
+    service: fileSystem(),
+  }),
+});
+```
+
+The default filesystem location is derived from the binding name:
+
+```text
+<cwd>/.sourdough/r2/BUCKET
+```
+
+Use `storageDir` to select an explicit bucket directory:
+
+```typescript
+export const env = defineEnv({
+  BUCKET: r2({
+    service: fileSystem({
+      storageDir: "/var/lib/my-app/uploads",
+    }),
+  }),
+});
+```
+
+## Application API
+
+Application code only sees the Cloudflare-facing `R2Bucket`:
+
+```typescript
+import { env } from "./env.js";
 
 export default {
-  async fetch(request: Request, env: Env) {
+  async fetch() {
     await env.BUCKET.put("hello.txt", "Hello from Sourdough");
     const object = await env.BUCKET.get("hello.txt");
-    return new Response(object?.body);
+    return object
+      ? new Response(object.body, { headers: { etag: object.httpEtag } })
+      : new Response("Not found", { status: 404 });
   },
 };
 ```
 
-## Node.js filesystem provider
+Object keys are hashed before becoming filesystem paths. Writes stream into an
+immutable data file and atomically swap a metadata pointer, preventing path
+traversal and partial replacement reads.
 
-The runtime can construct a bucket with the first-party provider:
+## Low-level construction
+
+Consumers that do not use `defineEnv` can construct a bucket directly:
 
 ```typescript
 import { createFileSystemR2Bucket } from "@redwoodjs/sourdough/r2/node";
@@ -38,20 +72,24 @@ const bucket = createFileSystemR2Bucket({
 });
 ```
 
-Object keys are hashed before becoming filesystem paths. Writes stream into an
-immutable data file and atomically swap a metadata pointer, preventing path
-traversal and partial replacement reads.
-
 ## Custom providers
 
-Implement `R2Service` to adapt another object service:
+Implement `R2Service` to adapt another object service and pass the instance to
+`r2()`:
 
 ```typescript
-import type { R2Service } from "@redwoodjs/sourdough/r2";
+import { defineEnv } from "@redwoodjs/sourdough";
+import { r2, type R2Service } from "@redwoodjs/sourdough/r2";
 
 class S3R2Service implements R2Service {
   // Implement the portable service contract using an S3 client.
 }
+
+export const env = defineEnv({
+  BUCKET: r2({
+    service: new S3R2Service(),
+  }),
+});
 ```
 
 The `R2Bucket` adapter remains responsible for Cloudflare-facing overloads,

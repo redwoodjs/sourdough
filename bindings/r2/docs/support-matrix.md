@@ -43,6 +43,7 @@
 | Streaming and backpressure | Supported | Provider writes and reads use streams without buffering full objects. |
 | Atomic object replacement | Supported | Immutable data files and an atomic metadata-pointer swap prevent partial replacement reads. |
 | Bucket isolation | Supported | Each provider instance uses an explicitly configured bucket root. |
+| `env` composition | Supported | `defineEnv`, `r2`, and the Node `fileSystem` descriptor expose a named `R2Bucket`. |
 
 ## Service contract and providers
 

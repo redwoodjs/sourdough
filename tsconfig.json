@@ -10,5 +10,5 @@
     "strict": true,
     "skipLibCheck": true
   },
-  "include": ["bindings/**/*.ts"]
+  "include": ["bindings/**/*.ts", "src/**/*.ts"]
 }

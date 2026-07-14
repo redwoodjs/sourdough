@@ -1,3 +1,9 @@
+import {
+  defineBinding,
+  resolveService,
+  type BindingDefinition,
+  type ServiceInput,
+} from "../../../src/env.js";
 import type {
   R2Service,
   R2ServiceGetOptions,
@@ -24,6 +30,17 @@ import {
   type R2UploadedPart,
   type R2UploadPartOptions,
 } from "./types.js";
+
+export interface R2BindingOptions {
+  service: ServiceInput<R2Service>;
+}
+
+/** Defines an R2 binding that is materialized under its env binding name. */
+export function r2(options: R2BindingOptions): BindingDefinition<R2Bucket> {
+  return defineBinding(context =>
+    new R2Bucket(resolveService(options.service, context)),
+  );
+}
 
 export class R2Bucket {
   constructor(private readonly service: R2Service) {}
