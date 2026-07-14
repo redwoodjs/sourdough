@@ -21,13 +21,13 @@ Priority tier and implementation status are separate:
 | Service binding | `@redwoodjs/sourdough/service-binding` | Planned | [Support matrix](../bindings/service-binding/docs/support-matrix.md) |
 | Durable Object | `@redwoodjs/sourdough/durable-object` | **Partial** | [Support matrix](../bindings/durable-object/docs/support-matrix.md) |
 | KV | `@redwoodjs/sourdough/kv` | Planned | [Support matrix](../bindings/kv/docs/support-matrix.md) |
-| R2 | `@redwoodjs/sourdough/r2` | Planned | [Support matrix](../bindings/r2/docs/support-matrix.md) |
+| [R2](../bindings/r2/) | `@redwoodjs/sourdough/r2` | **Partial** | [Support matrix](../bindings/r2/docs/support-matrix.md) |
 | D1 | `@redwoodjs/sourdough/d1` | Planned | [Support matrix](../bindings/d1/docs/support-matrix.md) |
 | Queue | `@redwoodjs/sourdough/queue` | Planned | [Support matrix](../bindings/queue/docs/support-matrix.md) |
 | Assets | `@redwoodjs/sourdough/assets` | Planned | [Support matrix](../bindings/assets/docs/support-matrix.md) |
 
-The proposed import path becomes a public package export when implementation
-work begins. Until then, the linked document defines the compatibility target.
+Planned bindings show their proposed import path. The path becomes a public
+package export when implementation work begins.
 
 ## Uncategorized
 

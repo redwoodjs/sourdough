@@ -27,7 +27,7 @@ pnpm add @redwoodjs/sourdough
 | Service binding | `@redwoodjs/sourdough/service-binding` | Planned |
 | [Durable Object](bindings/durable-object) | `@redwoodjs/sourdough/durable-object` | Partial |
 | KV | `@redwoodjs/sourdough/kv` | Planned |
-| R2 | `@redwoodjs/sourdough/r2` | Planned |
+| [R2](bindings/r2) | `@redwoodjs/sourdough/r2` | Partial |
 | D1 | `@redwoodjs/sourdough/d1` | Planned |
 | Queue | `@redwoodjs/sourdough/queue` | Planned |
 | Assets | `@redwoodjs/sourdough/assets` | Planned |
@@ -56,7 +56,7 @@ export class Counter extends DurableObject {
 bindings/
   durable-object/   # exported as @redwoodjs/sourdough/durable-object
   kv/               # future @redwoodjs/sourdough/kv export
-  r2/               # future @redwoodjs/sourdough/r2 export
+  r2/               # @redwoodjs/sourdough/r2 plus Node.js provider
   ...
 docs/
   support-matrix.md # status of every binding

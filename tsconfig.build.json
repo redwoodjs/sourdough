@@ -9,6 +9,7 @@
   "exclude": [
     "bindings/**/*.bench.ts",
     "bindings/**/*.test.ts",
-    "bindings/**/fixtures/**"
+    "bindings/**/fixtures/**",
+    "bindings/**/test/**"
   ]
 }
