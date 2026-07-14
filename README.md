@@ -66,8 +66,10 @@ Each directory under `bindings/` owns its implementation, tests, and
 compatibility documentation. The root package exposes those directories as
 subpath exports; bindings are modules within Sourdough, not separate packages.
 
-See [Binding module architecture](docs/architecture.md) for the conventions a
-new binding should follow.
+See [Binding module architecture](docs/architecture.md) for repository
+conventions and the [service adapter model](docs/service-adapter-model.md) for
+the separation between Cloudflare APIs, portable service contracts, providers,
+and runtime hosts.
 
 ## Runtime support
 

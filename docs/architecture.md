@@ -2,7 +2,9 @@
 
 Sourdough is a single package with one public subpath export per binding. An
 application installs `@redwoodjs/sourdough`, then imports only the binding
-modules it needs:
+modules it needs. Each module follows the
+[service adapter model](service-adapter-model.md): a Cloudflare-compatible API
+adapts a portable service contract implemented by one or more providers.
 
 ```typescript
 import { DurableObject } from "@redwoodjs/sourdough/durable-object";
@@ -37,11 +39,12 @@ A binding module must:
 
 1. expose the same public API names as the Cloudflare binding where practical;
 2. document supported and missing API surface in `docs/support-matrix.md`;
-3. avoid importing unrelated binding modules;
-4. keep storage and transport adapters behind the binding's public API;
-5. export its public surface from its own `src/index.ts`;
-6. have a root-package subpath export; and
-7. add or update its row in `docs/support-matrix.md`.
+3. define a backend-independent service contract for providers;
+4. keep runtime and provider details behind the binding adapter;
+5. avoid importing unrelated binding modules;
+6. export its public surface from its own `src/index.ts`;
+7. have a root-package subpath export; and
+8. add or update its row in `docs/support-matrix.md`.
 
 ## Internal boundaries
 
