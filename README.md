@@ -15,7 +15,7 @@ pnpm add @redwoodjs/sourdough
 
 | Binding | Import | Status |
 | --- | --- | --- |
-| [Durable Objects](bindings/durable-objects) | `@redwoodjs/sourdough/durable-objects` | Partial |
+| [Durable Objects](bindings/durable-object) | `@redwoodjs/sourdough/durable-object` | Partial |
 
 See the [complete binding support matrix](docs/support-matrix.md) for every
 binding exposed by the Cloudflare Developer Platform and its implementation
@@ -24,7 +24,7 @@ status in Sourdough.
 ## Import only what you need
 
 ```typescript
-import { DurableObject } from "@redwoodjs/sourdough/durable-objects";
+import { DurableObject } from "@redwoodjs/sourdough/durable-object";
 
 export class Counter extends DurableObject {
   async fetch() {
@@ -39,7 +39,7 @@ export class Counter extends DurableObject {
 
 ```text
 bindings/
-  durable-objects/  # exported as @redwoodjs/sourdough/durable-objects
+  durable-object/   # exported as @redwoodjs/sourdough/durable-object
   kv/               # future @redwoodjs/sourdough/kv export
   r2/               # future @redwoodjs/sourdough/r2 export
   ...

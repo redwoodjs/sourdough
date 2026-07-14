@@ -23,7 +23,7 @@ Cloudflare service can be reached through its public REST API.
 | [Browser Run](https://developers.cloudflare.com/browser-run/) | — | Planned | Browser automation sessions. |
 | [D1](https://developers.cloudflare.com/d1/worker-api/) | — | Planned | SQL database binding. |
 | [Dispatcher](https://developers.cloudflare.com/cloudflare-for-platforms/workers-for-platforms/configuration/dynamic-dispatch/) | — | Planned | Workers for Platforms dispatch namespaces. |
-| [Durable Objects](../bindings/durable-objects/) | `@redwoodjs/sourdough/durable-objects` | **Partial** | SQLite storage, alarms, serialized execution, RPC, WebSockets, hibernation, and multi-process hosting exist; full conformance remains incomplete. |
+| [Durable Objects](../bindings/durable-object/) | `@redwoodjs/sourdough/durable-object` | **Partial** | SQLite storage, alarms, serialized execution, RPC, WebSockets, hibernation, and multi-process hosting exist; full conformance remains incomplete. |
 | [Dynamic Worker Loaders](https://developers.cloudflare.com/workers/runtime-apis/bindings/worker-loader/) | — | Planned | Runtime loading of Worker code. |
 | [Environment Variables](https://developers.cloudflare.com/workers/configuration/environment-variables/) | — | Planned | Plain-text values exposed through `env`. |
 | [Hyperdrive](https://developers.cloudflare.com/hyperdrive/) | — | Planned | Database connection acceleration binding. |
@@ -44,7 +44,7 @@ Cloudflare service can be reached through its public REST API.
 
 ## Durable Object details
 
-The module-specific [compatibility document](../bindings/durable-objects/docs/compatibility.md)
+The module-specific [compatibility document](../bindings/durable-object/docs/compatibility.md)
 tracks the Durable Object API at method level. A binding only moves to
 **Supported** after its documented API and important runtime semantics are
 covered by compatibility tests.

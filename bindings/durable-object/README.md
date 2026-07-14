@@ -15,7 +15,7 @@ pnpm add @redwoodjs/sourdough
 import {
   ClusterCoordinator,
   DurableObject,
-} from "@redwoodjs/sourdough/durable-objects";
+} from "@redwoodjs/sourdough/durable-object";
 
 class Counter extends DurableObject {
   async fetch() {

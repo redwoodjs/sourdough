@@ -5,7 +5,7 @@ application installs `@redwoodjs/sourdough`, then imports only the binding
 modules it needs:
 
 ```typescript
-import { DurableObject } from "@redwoodjs/sourdough/durable-objects";
+import { DurableObject } from "@redwoodjs/sourdough/durable-object";
 ```
 
 ## Directory convention
@@ -25,9 +25,9 @@ The root `package.json` maps each binding directory to a public export:
 ```json
 {
   "exports": {
-    "./durable-objects": {
-      "types": "./dist/bindings/durable-objects/src/index.d.ts",
-      "import": "./dist/bindings/durable-objects/src/index.js"
+    "./durable-object": {
+      "types": "./dist/bindings/durable-object/src/index.d.ts",
+      "import": "./dist/bindings/durable-object/src/index.js"
     }
   }
 }
