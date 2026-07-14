@@ -4,11 +4,11 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "lib": ["ESNext", "DOM"],
-    "rootDir": "src",
+    "rootDir": ".",
     "outDir": "dist",
     "types": ["node"],
     "strict": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*.ts"]
+  "include": ["bindings/**/*.ts"]
 }

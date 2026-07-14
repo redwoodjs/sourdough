@@ -6,7 +6,7 @@ and, eventually, Nub.
 ## Install
 
 ```bash
-pnpm add @redwoodjs/sourdough-durable-object
+pnpm add @redwoodjs/sourdough
 ```
 
 ## Usage
@@ -15,7 +15,7 @@ pnpm add @redwoodjs/sourdough-durable-object
 import {
   ClusterCoordinator,
   DurableObject,
-} from "@redwoodjs/sourdough-durable-object";
+} from "@redwoodjs/sourdough/durable-objects";
 
 class Counter extends DurableObject {
   async fetch() {
@@ -33,8 +33,8 @@ console.log(await response.text());
 ```
 
 The exported class is named `DurableObject` to match the Cloudflare API. The
-package name identifies this as Sourdough's implementation; application-facing
-API names should remain compatible.
+subpath identifies this as Sourdough's implementation; application-facing API
+names should remain compatible.
 
 ## Documentation
 
@@ -44,5 +44,5 @@ API names should remain compatible.
 
 ## Status
 
-This package is experimental and partially compatible. See the compatibility
-document for implemented behavior and known gaps.
+This binding module is experimental and partially compatible. See the
+compatibility document for implemented behavior and known gaps.

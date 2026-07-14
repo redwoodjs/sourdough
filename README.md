@@ -2,28 +2,29 @@
 
 > Pick the Cloudflare-compatible bindings you need and run them on Node.js or Nub.
 
-Sourdough is a collection of independent, self-hostable binding implementations.
-Each binding lives in its own package, so an application can install one binding
-without pulling in the rest of the platform.
+Sourdough is one package with a subpath export for each self-hostable binding.
+Applications import only the binding modules they use.
+
+## Install
+
+```bash
+pnpm add @redwoodjs/sourdough
+```
 
 ## Bindings
 
-| Binding | Package | Status |
+| Binding | Import | Status |
 | --- | --- | --- |
-| [Durable Object](bindings/durable-object) | `@redwoodjs/sourdough-durable-object` | Partial |
+| [Durable Objects](bindings/durable-objects) | `@redwoodjs/sourdough/durable-objects` | Partial |
 
 See the [complete binding support matrix](docs/support-matrix.md) for every
 binding exposed by the Cloudflare Developer Platform and its implementation
 status in Sourdough.
 
-## Install only what you need
-
-```bash
-pnpm add @redwoodjs/sourdough-durable-object
-```
+## Import only what you need
 
 ```typescript
-import { DurableObject } from "@redwoodjs/sourdough-durable-object";
+import { DurableObject } from "@redwoodjs/sourdough/durable-objects";
 
 export class Counter extends DurableObject {
   async fetch() {
@@ -38,19 +39,19 @@ export class Counter extends DurableObject {
 
 ```text
 bindings/
-  durable-object/   # Durable Object API, storage, host runtime, tests, and docs
-  kv/               # future KV binding package
-  r2/               # future R2 binding package
+  durable-objects/  # exported as @redwoodjs/sourdough/durable-objects
+  kv/               # future @redwoodjs/sourdough/kv export
+  r2/               # future @redwoodjs/sourdough/r2 export
   ...
 docs/
   support-matrix.md # status of every binding
 ```
 
-Every directory under `bindings/` is intended to be independently installable,
-testable, and documented. Cross-binding orchestration should compose these
-packages rather than make them depend on one large umbrella package.
+Each directory under `bindings/` owns its implementation, tests, and
+compatibility documentation. The root package exposes those directories as
+subpath exports; bindings are modules within Sourdough, not separate packages.
 
-See [Binding package architecture](docs/architecture.md) for the conventions a
+See [Binding module architecture](docs/architecture.md) for the conventions a
 new binding should follow.
 
 ## Runtime support

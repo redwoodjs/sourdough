@@ -3,7 +3,7 @@
 **Overall status: Partial**
 
 This document tracks the API and behavioral compatibility of
-`@redwoodjs/sourdough-durable-object` with Cloudflare's Durable Object API. The
+`@redwoodjs/sourdough/durable-objects` with Cloudflare's Durable Object API. The
 public base class is named `DurableObject` so compatible application code does
 not need a Sourdough-specific class name.
 
@@ -38,7 +38,7 @@ not need a Sourdough-specific class name.
 ## Base class
 
 ```typescript
-import { DurableObject } from "@redwoodjs/sourdough-durable-object";
+import { DurableObject } from "@redwoodjs/sourdough/durable-objects";
 
 interface Env {
   GREETING: string;

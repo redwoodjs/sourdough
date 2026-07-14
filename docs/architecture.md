@@ -1,7 +1,12 @@
-# Binding package architecture
+# Binding module architecture
 
-Sourdough is a catalog of bindings, not a monolithic runtime. Applications
-should be able to pick one binding without installing unrelated services.
+Sourdough is a single package with one public subpath export per binding. An
+application installs `@redwoodjs/sourdough`, then imports only the binding
+modules it needs:
+
+```typescript
+import { DurableObject } from "@redwoodjs/sourdough/durable-objects";
+```
 
 ## Directory convention
 
@@ -9,36 +14,43 @@ Each binding lives at `bindings/<binding-name>/` and owns:
 
 ```text
 bindings/<binding-name>/
-  package.json
   README.md
   docs/
     compatibility.md
   src/
-  tsconfig.json
-  vitest.config.ts
 ```
 
-A binding package must:
+The root `package.json` maps each binding directory to a public export:
+
+```json
+{
+  "exports": {
+    "./durable-objects": {
+      "types": "./dist/bindings/durable-objects/src/index.d.ts",
+      "import": "./dist/bindings/durable-objects/src/index.js"
+    }
+  }
+}
+```
+
+A binding module must:
 
 1. expose the same public API names as the Cloudflare binding where practical;
 2. document supported and missing API surface in `docs/compatibility.md`;
-3. run and test independently;
-4. avoid dependencies on unrelated bindings;
-5. keep storage and transport adapters behind the binding's public API; and
-6. add or update its row in `docs/support-matrix.md`.
+3. avoid importing unrelated binding modules;
+4. keep storage and transport adapters behind the binding's public API;
+5. export its public surface from its own `src/index.ts`;
+6. have a root-package subpath export; and
+7. add or update its row in `docs/support-matrix.md`.
 
-## Package names
+## Internal boundaries
 
-Binding packages use `@redwoodjs/sourdough-<binding-name>`. For example, the
-Durable Object implementation is published as
-`@redwoodjs/sourdough-durable-object`.
+A subpath import must not initialize unrelated bindings. Shared code should stay
+inside a binding until at least two bindings need it, then move into an internal
+root module. Shared modules must not import specific bindings.
 
-## Shared code
-
-Code should stay in its binding until at least two bindings need it. Reusable
-runtime primitives can then move to a focused package under `packages/`.
-Bindings may depend on those primitives, but the shared package must not import
-specific bindings.
+Some dependencies may be installed with the root package, but binding-specific
+code and side effects remain behind the binding's subpath export.
 
 ## Status definitions
 

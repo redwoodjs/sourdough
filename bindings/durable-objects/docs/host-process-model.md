@@ -65,7 +65,7 @@ Even on a single machine, a multi-process architecture provides critical benefit
 The class is named `ClusterCoordinator`. It manages the lifecycle of the worker processes.
 
 ```typescript
-import { ClusterCoordinator } from "@redwoodjs/sourdough-durable-object";
+import { ClusterCoordinator } from "@redwoodjs/sourdough/durable-objects";
 
 // Starts the Coordinator and spawns 2 host processes
 const registry = new ClusterCoordinator({
@@ -79,7 +79,7 @@ const registry = new ClusterCoordinator({
 You don't need to know *which* host process handles a specific object. The **Router** handles that lookup automatically.
 
 ```typescript
-import { route } from "@redwoodjs/sourdough-durable-object";
+import { route } from "@redwoodjs/sourdough/durable-objects";
 import { MyDO } from "./my-do.js";
 
 // Create a specific router for the 'MyDO' class.
@@ -108,7 +108,7 @@ You can use the `serve` helper to run your code in a Cloudflare-compatible way. 
 **Example: Using `serve()`**
 
 ```typescript
-import { serve } from "@redwoodjs/sourdough-durable-object";
+import { serve } from "@redwoodjs/sourdough/durable-objects";
 import { ChatDO } from "./chat-do.js";
 import { CounterDO } from "./counter-do.js";
 
@@ -141,7 +141,7 @@ The lower-level `route()` helper can also be mounted in an existing Node.js HTTP
 You might want a single host process handling all your actors to minimize overhead while still keeping them separate from your HTTP gateway.
 
 ```typescript
-import { serve } from "@redwoodjs/sourdough-durable-object";
+import { serve } from "@redwoodjs/sourdough/durable-objects";
 import { ChatDO } from "./chat.js";
 import { CounterDO } from "./counter.js";
 

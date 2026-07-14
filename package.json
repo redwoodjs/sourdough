@@ -1,14 +1,58 @@
 {
-  "name": "sourdough",
-  "private": true,
+  "name": "@redwoodjs/sourdough",
+  "version": "0.1.0",
   "description": "Portable Cloudflare-compatible bindings for Node.js and Nub.",
-  "scripts": {
-    "bench": "pnpm --recursive --if-present bench",
-    "test": "pnpm --recursive --if-present test",
-    "typecheck": "pnpm --recursive --if-present typecheck"
+  "type": "module",
+  "exports": {
+    "./durable-objects": {
+      "types": "./dist/bindings/durable-objects/src/index.d.ts",
+      "import": "./dist/bindings/durable-objects/src/index.js"
+    }
   },
+  "files": [
+    "bindings/*/docs",
+    "bindings/*/README.md",
+    "dist",
+    "docs",
+    "LICENSE.md",
+    "README.md"
+  ],
+  "scripts": {
+    "bench": "vitest bench",
+    "build": "rm -rf dist && tsc --project tsconfig.build.json",
+    "prepack": "pnpm build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/redwoodjs/sourdough.git"
+  },
+  "homepage": "https://github.com/redwoodjs/sourdough#readme",
+  "bugs": {
+    "url": "https://github.com/redwoodjs/sourdough/issues"
+  },
+  "keywords": [
+    "bindings",
+    "cloudflare",
+    "nodejs",
+    "nub",
+    "self-hosted"
+  ],
   "engines": {
     "node": ">=24.0.0"
   },
-  "packageManager": "pnpm@10.28.2"
+  "packageManager": "pnpm@10.28.2",
+  "author": "Peter Pistorius",
+  "license": "MIT",
+  "dependencies": {
+    "capnweb": "^0.4.0",
+    "tsx": "^4.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.17"
+  }
 }
