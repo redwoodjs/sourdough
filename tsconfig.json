@@ -1,5 +1,4 @@
 {
-  "extends": "../tsconfig.json",
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
@@ -7,7 +6,7 @@
     "lib": ["ESNext", "DOM"],
     "rootDir": "src",
     "outDir": "dist",
-    "types": ["bun-types"],
+    "types": ["node"],
     "strict": true,
     "skipLibCheck": true
   },

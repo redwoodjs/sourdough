@@ -7,36 +7,22 @@ import { serialize, deserialize } from "node:v8";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const isBun = typeof Bun !== "undefined";
 
 /**
- * Cross-runtime serialization
+ * Runtime serialization
  */
-export function fastSerialize(value: any): Buffer | Uint8Array {
-  if (isBun) {
-    // @ts-ignore
-    return Bun.serialize(value);
-  }
+export function fastSerialize(value: any): Buffer {
   return serialize(value);
 }
 
 export function fastDeserialize(value: Buffer | Uint8Array): any {
-  if (isBun) {
-    // @ts-ignore
-    return Bun.deserialize(value);
-  }
   return deserialize(value);
 }
 
 /**
- * Native SQLite Driver Discovery
+ * Native SQLite driver discovery
  */
 export async function getSqliteDriver(): Promise<any> {
-  if (isBun) {
-    // @ts-ignore
-    return (await import("bun:sqlite")).Database;
-  }
-
   try {
     const sqlite = require("node:sqlite");
     if (sqlite.DatabaseSync) {
@@ -58,7 +44,7 @@ export async function getSqliteDriver(): Promise<any> {
       );
     }
     throw new Error(
-      "OpenDurableObject Persistence Error: Persistent storage is not supported in this runtime. Currently only Bun and Node.js (v22.5+) are supported."
+      "Sourdough persistence is not supported in this runtime. Node.js 22.5 or later is required."
     );
   }
 }
@@ -112,7 +98,6 @@ export class SqliteStorage implements DurableObjectStorage {
       get databaseSize(): number {
         const pageCount = dbInstance.prepare("PRAGMA page_count").get() as any;
         const pageSize = dbInstance.prepare("PRAGMA page_size").get() as any;
-        // The return structure differs slightly between Bun and Node
         const count = typeof pageCount === "number" ? pageCount : Object.values(pageCount)[0] as number;
         const size = typeof pageSize === "number" ? pageSize : Object.values(pageSize)[0] as number;
         return count * size;

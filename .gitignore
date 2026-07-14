@@ -1,6 +1,11 @@
 node_modules
 *.sqlite
+*.sock
 .test-storage
 .bench-storage
+.serve-test-storage*
+.storage
+coverage
 dist
 test_output.txt
+.DS_Store

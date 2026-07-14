@@ -1,10 +1,10 @@
 import {
   OpenDurableObject,
 } from "./durable-object/index.js";
+import { spawn, type ChildProcess } from "node:child_process";
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
-import { createRequire } from "node:module";
 import {
   InstanceContainer,
   OpenDOConstructor
@@ -18,7 +18,6 @@ import { connectUds, UdsSocket } from "./transport.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const isBun = typeof Bun !== "undefined";
 
 /**
  * Remote Stub for interacting with a DO in another host process
@@ -81,102 +80,61 @@ class RemoteStub {
         hostUrl.searchParams.append(k, v);
     });
 
-    // 3. Send Request via `fetch`?
-    // Run `fetch` over UDS?
-    // Bun supports `fetch(url, { unix: socketPath })`.
-    // Node.js doesn't natively support `fetch` over UDS easily without an agent.
-    // Creating a custom agent is complex.
-    
-    // Alternative: We manually write HTTP 1.1 packet to the socket.
-    // Or we use the `transport.ts` abstraction.
-    
-    // Since `transport.ts` returns a raw socket (stream), we have to write raw HTTP.
-    
-    // Implementing a full HTTP client is hard.
-    // BUT we are only sending one request.
-    
-    // Let's see if we can use `fetch` with a custom dispatcher in Node (undici)?
-    // Or `http.request`.
-    
-    if (isBun) {
-       // @ts-ignore
-       return fetch(hostUrl.toString(), {
-           method: request.method,
-           headers: request.headers,
-           body: request.body,
-           unix: this.#socketPath
-       });
-    } else {
-       // Node.js implementation using 'http' module and 'socketPath' option
-       const http = await import("node:http");
-       
-       return new Promise((resolve, reject) => {
-           const headersObj: Record<string, string> = {};
-           request.headers.forEach((v, k) => {
-               headersObj[k] = v;
-           });
+    // Send the request over the host's Unix domain socket with Node's HTTP client.
 
-           const options = {
-               socketPath: this.#socketPath,
-               method: request.method,
-               path: hostUrl.pathname + hostUrl.search,
-               headers: headersObj
-           };
-           
-           const req = http.request(options, (res) => {
-               // Convert IncomingMessage to Response
-               const headers = new Headers();
-               for (const [k, v] of Object.entries(res.headers)) {
-                   if (Array.isArray(v)) v.forEach(val => headers.append(k, val));
-                   else if (v) headers.set(k, v);
-               }
-               
-               // Read body
-               // We function as a proxy, so we can return a stream?
-               // Response takes a ReadableStream.
-               // Node stream is an AsyncIterable.
-               
-               // @ts-ignore
-               const response = new Response(res as any, {
-                   status: res.statusCode,
-                   statusText: res.statusMessage,
-                   headers: headers
-               });
-               
-               resolve(response);
-           });
-           
-           req.on('error', reject);
-           
-           if (request.body) {
-                // Pipe request body to req
-                // request.body is ReadableStream
-                // req is Writable
-                // We need to read from ReadableStream and write to req.
-                const reader = request.body.getReader();
-                const pump = async () => {
-                    const { done, value } = await reader.read();
-                    if (done) {
-                        req.end();
-                        return;
-                    }
-                    req.write(value);
-                    pump();
-                };
-                pump().catch(reject);
-           } else {
-               req.end();
-           }
-       });
-    }
+    const http = await import("node:http");
+
+    return new Promise((resolve, reject) => {
+        const headersObj: Record<string, string> = {};
+        request.headers.forEach((value, name) => {
+            headersObj[name] = value;
+        });
+
+        const req = http.request({
+            socketPath: this.#socketPath,
+            method: request.method,
+            path: hostUrl.pathname + hostUrl.search,
+            headers: headersObj,
+        }, (res) => {
+            const headers = new Headers();
+            for (const [name, value] of Object.entries(res.headers)) {
+                if (Array.isArray(value)) value.forEach(item => headers.append(name, item));
+                else if (value) headers.set(name, value);
+            }
+
+            resolve(new Response(res as any, {
+                status: res.statusCode,
+                statusText: res.statusMessage,
+                headers,
+            }));
+        });
+
+        req.on("error", reject);
+
+        if (request.body) {
+            const reader = request.body.getReader();
+            const pump = async (): Promise<void> => {
+                const { done, value } = await reader.read();
+                if (done) {
+                    req.end();
+                    return;
+                }
+                req.write(value);
+                await pump();
+            };
+            pump().catch(reject);
+        } else {
+            req.end();
+        }
+    });
   }
 }
 
 class HostProcessHandle {
     socketPath: string;
-    process: any;
+    process: ChildProcess;
     
-    constructor(socketPath: string, proc: any) {
+    constructor(socketPath: string, proc: ChildProcess) {
         this.socketPath = socketPath;
         this.process = proc;
     }
@@ -231,25 +189,12 @@ export class ClusterCoordinator {
           const socketPath = path.resolve(process.cwd(), `.do-host-${i}.sock`);
           const storageDir = this.#options.storageDir || process.cwd();
           
-          let proc: any;
-          if (isBun) {
-              // @ts-ignore
-             proc = Bun.spawn(["bun", "run", hostScript, "--socket", socketPath, "--storage", storageDir], {
-                 stdout: "inherit",
-                 stderr: "inherit"
-             });
-          } else {
-              const cp = require("child_process"); // use require inside valid scope or import
-              // we can use imported 'spawn' if we import it? 
-              // dynamic import for node child_process to be safe in Bun?
-              // Just use createRequire to be safe cross-runtime code in one file
-              const { spawn } = createRequire(import.meta.url)("child_process");
-              // Use npx tsx to execute the TypeScript worker in Node environment
-              proc = spawn("npx", ["tsx", hostScript, "--socket", socketPath, "--storage", storageDir], {
-                  stdio: "inherit"
-              });
-          }
-          
+          const proc = spawn(
+              process.execPath,
+              ["--import", "tsx", hostScript, "--socket", socketPath, "--storage", storageDir],
+              { stdio: "inherit" },
+          );
+
           this.#hosts.push(new HostProcessHandle(socketPath, proc));
       }
   }
@@ -357,15 +302,9 @@ export class ClusterCoordinator {
       }
       this.#containers.clear();
       
-      // Kill host processes
       for (const host of this.#hosts) {
-          // graceful kill?
           try {
-              if (isBun) {
-                 host.process.kill();
-              } else {
-                 host.process.kill();
-              }
+              host.process.kill();
           } catch {}
       }
       this.#hosts = [];

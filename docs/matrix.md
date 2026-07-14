@@ -1,10 +1,10 @@
 # Supported Feature Matrix
 
-This document tracks the supported features of `open-durable-objects` compared to the official Cloudflare Durable Objects API.
+This document tracks Sourdough's compatibility with the Cloudflare Durable Objects API.
 
 ## API Reference
 
-Since `open-durable-objects` aims to maintain API compatibility with Cloudflare, the following official documentation serves as the primary reference:
+Sourdough uses the following official Cloudflare documentation as its compatibility reference:
 
 - [**Durable Object State**](https://developers.cloudflare.com/durable-objects/api/state/) - `id`, `storage`, `blockConcurrencyWhile`, `waitUntil`.
 - [**Storage API (KV)**](https://developers.cloudflare.com/durable-objects/api/kv-storage/) - `get`, `put`, `delete`, `list`.

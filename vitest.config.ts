@@ -2,11 +2,7 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   test: {
-    poolOptions: {
-      forks: {
-        execArgv: ['--experimental-sqlite'],
-      },
-    },
+    execArgv: ['--experimental-sqlite'],
     pool: 'forks',
     server: {
       deps: {

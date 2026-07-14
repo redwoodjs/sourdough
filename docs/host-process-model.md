@@ -1,4 +1,4 @@
-We have refactored the Open Durable Objects library to support a robust "Single Machine" process model. This architecture splits the monolithic runtime into a **Coordinator (Registry)** and a pool of **Host Processes**.
+Sourdough supports a robust "Single Machine" process model. This architecture splits the monolithic runtime into a **Coordinator (Registry)** and a pool of **Host Processes**.
 
 ## Architecture Overview
 
@@ -132,37 +132,13 @@ export default serve({
 });
 ```
 
-Alternatively, you can manually mount routers if you prefer `Bun.serve` directly (see previous examples).
-
-```typescript
-// 1. Create routers for your different classes
-const chatRouter = route(registry, ChatDO);
-const counterRouter = route(registry, CounterDO);
-
-Bun.serve({
-  port: 3000,
-  fetch: async (req) => {
-    const url = new URL(req.url);
-    
-    // 2. Dispatch based on path
-    if (url.pathname.startsWith("/chat")) {
-      return chatRouter(req);
-    }
-    
-    if (url.pathname.startsWith("/counter")) {
-      return counterRouter(req);
-    }
-    
-    return new Response("Not Found", { status: 404 });
-  }
-});
-```
+The lower-level `route()` helper can also be mounted in an existing Node.js HTTP adapter when you do not want `serve()` to own the server.
 
 ### Configuration Examples
 
 **Scenario: Single Host Process for Everything**
 
-You might want a single host process (like a standard Node.js/Bun server) handling all your Durable Objects to minimize overhead, while still keeping them separate from your HTTP gateway.
+You might want a single host process handling all your actors to minimize overhead while still keeping them separate from your HTTP gateway.
 
 ```typescript
 import { serve } from "@redwoodjs/sourdough";
@@ -189,7 +165,7 @@ export default serve({
 
 ## Internal Mechanics
 
-1.  **Spawn**: The Registry spawns `host/process.ts` using `bun` or `npx tsx`.
+1.  **Spawn**: The coordinator starts `host/process.ts` in Node.js with the `tsx` loader.
 2.  **Placement**: The Registry hashes the Object ID to select a host.
 3.  **Proxy**: `registry.get()` returns a `RemoteStub` which serializes the request logic.
 4.  **Transport**: The `RemoteStub` connects to the Host's UDS and sends the request.

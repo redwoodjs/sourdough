@@ -1,151 +1,176 @@
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import type { AddressInfo } from "node:net";
 import { ClusterCoordinator } from "./coordinator.js";
 import { route } from "./router.js";
 
-// Types for the Worker definition
 export interface Env {
   [key: string]: any;
 }
 
 export interface ExecutionContext {
-  waitUntil(promise: Promise<any>): void;
+  waitUntil(promise: Promise<unknown>): void;
   passThroughOnException(): void;
 }
 
 export interface WorkerEntrypoint {
-  fetch: (request: Request, env: Env, ctx: ExecutionContext) => Promise<Response> | Response;
+  fetch(
+    request: Request,
+    env: Env,
+    ctx: ExecutionContext,
+  ): Promise<Response> | Response;
 }
 
 export interface ServeOptions {
-  /**
-   * Port to listen on. Defaults to 3000.
-   */
+  /** Hostname to listen on. Defaults to 127.0.0.1. */
+  hostname?: string;
+  /** Port to listen on. Defaults to 3000. Use 0 to select a free port. */
   port?: number;
-  
-  /**
-   * Configuration for Durable Objects bindings.
-   * Maps a binding name (e.g. "COUNTER") to a Durable Object class.
-   */
-  durableObjects?: Record<string, any>; // Using 'any' for class constructor to avoid complex type issues for now
-  
-  /**
-   * Number of host processes to spawn.
-   */
+  /** Maps environment binding names to stateful actor classes. */
+  durableObjects?: Record<string, any>;
+  /** Number of actor host processes to spawn. */
   hostCount?: number;
-  
-  /**
-   * Directory to store Durable Object data.
-   */
+  /** Directory used for actor data. */
   storageDir?: string;
 }
 
+export interface SourdoughServer {
+  readonly coordinator: ClusterCoordinator;
+  readonly ready: Promise<void>;
+  address(): AddressInfo | string | null;
+  close(): Promise<void>;
+}
+
 /**
- * Starts a server that mimics a Cloudflare Worker environment.
- * 
- * @param worker The worker definition (export default { fetch })
- * @param options Configuration options
+ * Starts an HTTP server with a Workers-style fetch entrypoint and stateful actor
+ * bindings.
  */
-export function serve(worker: WorkerEntrypoint, options: ServeOptions = {}) {
-  const registry = new ClusterCoordinator({
+export function serve(
+  worker: WorkerEntrypoint,
+  options: ServeOptions = {},
+): SourdoughServer {
+  const coordinator = new ClusterCoordinator({
     hostCount: options.hostCount,
     storageDir: options.storageDir,
   });
+  const env = createEnv(coordinator, options.durableObjects);
+  const backgroundTasks = new Set<Promise<unknown>>();
+  const ctx: ExecutionContext = {
+    waitUntil(promise) {
+      backgroundTasks.add(promise);
+      promise
+        .catch((error) => console.error("Sourdough background task failed", error))
+        .finally(() => backgroundTasks.delete(promise));
+    },
+    passThroughOnException() {},
+  };
 
-  // 2. Prepare the 'env' object with DO bindings
+  const server = createServer(async (request, response) => {
+    try {
+      const webRequest = await toWebRequest(request);
+      const webResponse = await worker.fetch(webRequest, env, ctx);
+      await writeWebResponse(webResponse, response);
+    } catch (error) {
+      console.error("Sourdough request failed", error);
+      if (!response.headersSent) {
+        response.statusCode = 500;
+        response.setHeader("content-type", "text/plain; charset=utf-8");
+      }
+      response.end("Internal Server Error");
+    }
+  });
+
+  const port = options.port ?? 3000;
+  const hostname = options.hostname ?? "127.0.0.1";
+  const ready = new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(port, hostname, () => {
+      server.off("error", reject);
+      resolve();
+    });
+  });
+
+  return {
+    coordinator,
+    ready,
+    address: () => server.address(),
+    async close() {
+      await ready;
+      await new Promise<void>((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()));
+      });
+      await Promise.allSettled(backgroundTasks);
+      coordinator.close();
+    },
+  };
+}
+
+function createEnv(
+  coordinator: ClusterCoordinator,
+  durableObjects: Record<string, any> = {},
+): Env {
   const env: Env = {};
-  
-  if (options.durableObjects) {
-    for (const [bindingName, DOClass] of Object.entries(options.durableObjects)) {
-      const router = route(registry, DOClass);
-      
-      // The binding usually has methods like idFromName, idFromString, get(id)
-      // We need to match Cloudflare's DurableObjectNamespace API
-      env[bindingName] = {
-        idFromName: (name: string) => ({ toString: () => name }), // Simple mapping for now
-        idFromString: (hexId: string) => ({ toString: () => hexId }),
-        get: (id: { toString: () => string }) => {
-          const stub = {
-            fetch: (request: Request | string, init?: RequestInit) => {
-              let req: Request;
-              if (request instanceof Request) {
-                 req = request;
-              } else {
-                 req = new Request(request, init);
-              }
-              
-              const idStr = id.toString();
-              
-              // We need to attach the ID to the request so the router can find it.
-              // The router created by 'route' expects 'id' param by default,
-              // or we can invoke it directly?
-              // Actually, 'route' returns a function that takes a Request.
-              // But that function uses the idExtractor.
-              // To make this seamless, we might want to manually invoke registry.get() here via the router logic?
-              // Or simpler: Reuse the router we created, but we need to ensure the ID is in the URL 
-              // if we use the default idExtractor.
-              
-              // But wait, CF usage is `stub.fetch(req)`.
-              // Our 'route' returns a handler that looks at URL params.
-              // Better implementation of 'get': return a Stub that calls registry directly?
-              
-              // Let's rely on the URL param hack for compatibility with our existing Router for now, 
-              // OR better: use registry.get() directly here since we have the registry!
-              
-              // The CF stub.fetch() typically treats the request as relative to the object.
-              // But our underlying mechanism is UDS-based or Local.
-              
-              // Implementation using 'route' is "Gateway" style.
-              // Implementation using 'registry.get' is "Internal" style.
-              
-              // Let's use the router but modify the URL to include the ID, similar to how RemoteStub works?
-              // Actually, simpler:
-              const url = new URL(req.url);
-              url.searchParams.set("id", idStr); 
-              return router(new Request(url.toString(), req));
-            }
-          };
-          return stub;
-        }
-      };
+
+  for (const [bindingName, ActorClass] of Object.entries(durableObjects)) {
+    const router = route(coordinator, ActorClass);
+
+    env[bindingName] = {
+      idFromName: (name: string) => ({ toString: () => name }),
+      idFromString: (id: string) => ({ toString: () => id }),
+      get: (id: { toString(): string }) => ({
+        fetch(request: Request | string, init?: RequestInit) {
+          const source = request instanceof Request ? request : new Request(request, init);
+          const url = new URL(source.url);
+          url.searchParams.set("id", id.toString());
+          return router(new Request(url, source));
+        },
+      }),
+    };
+  }
+
+  return env;
+}
+
+async function toWebRequest(request: IncomingMessage): Promise<Request> {
+  const headers = new Headers();
+  for (const [name, value] of Object.entries(request.headers)) {
+    if (Array.isArray(value)) {
+      for (const item of value) headers.append(name, item);
+    } else if (value !== undefined) {
+      headers.set(name, value);
     }
   }
 
-  // 3. Execution Context shim
-  const ctx: ExecutionContext = {
-    waitUntil: (promise: Promise<any>) => {
-      // In a real server, we might track these to ensure they complete before shutdown
-      promise.catch(console.error);
-    },
-    passThroughOnException: () => {}
-  };
+  const method = request.method ?? "GET";
+  const body = method === "GET" || method === "HEAD" ? undefined : await readBody(request);
+  const origin = `http://${headers.get("host") ?? "localhost"}`;
 
-  // 4. Start Server
-  const port = options.port || 3000;
-  
-  console.log(`Starting server on port ${port}...`);
-  
-  // Try using Bun.serve if available, otherwise node http
-  // @ts-ignore
-  if (typeof Bun !== "undefined") {
-    // @ts-ignore
-    Bun.serve({
-      port,
-      fetch: (req: Request) => {
-        return worker.fetch(req, env, ctx);
-      }
-    });
-  } else {
-    // Basic Node.js support typically requires a specialized adapter 
-    // since 'worker.fetch' expects Web Standards (Request/Response).
-    // For now, let's assume this is primarily for the prompt's context which seems Bun-heavy 
-    // or that we are running with a Node polyfill. 
-    // But to be safe, I'll throw if not Bun for this initial generic implementation, 
-    // or hint at it. But wait, `open-durable-objects` supports Node.
-    // I should probably import 'node:http' and use a simple wrapper if I want full support.
-    
-    // For MVP "do it", let's start with Bun.serve as the user context implies modern stack.
-    // I'll add a console warning if not Bun.
-    console.warn("Note: 'serve' currently uses Bun.serve. Node.js support requires an adapter.");
+  return new Request(new URL(request.url ?? "/", origin), {
+    method,
+    headers,
+    body: body as BodyInit | undefined,
+  });
+}
+
+async function readBody(request: IncomingMessage): Promise<Uint8Array | undefined> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of request) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
   }
-  
-  return registry; // Return registry so user can close it if needed?
+  return chunks.length > 0 ? Buffer.concat(chunks) : undefined;
+}
+
+async function writeWebResponse(
+  source: Response,
+  target: ServerResponse,
+): Promise<void> {
+  target.statusCode = source.status;
+  target.statusMessage = source.statusText;
+  source.headers.forEach((value, name) => target.setHeader(name, value));
+
+  if (!source.body) {
+    target.end();
+    return;
+  }
+
+  target.end(Buffer.from(await source.arrayBuffer()));
 }

@@ -3,12 +3,9 @@ import {
 } from "../durable-object/index.js";
 import { InstanceContainer, OpenDOConstructor } from "./runtime.js";
 import { SqliteStorage, InMemoryStorage, getSqliteDriver } from "./storage.js"; // Needs persistence
+import { createServer } from "node:http";
 import path from "node:path";
-import fs from "node:fs"; // for mkdir
-import { createRequire } from "node:module";
-
-const require = createRequire(import.meta.url);
-const isBun = typeof Bun !== "undefined";
+import fs from "node:fs";
 
 // Arguments: socketPath, storageDir, [UserHostPath?]
 // We need to know where the User's DO code is?
@@ -19,12 +16,12 @@ const isBun = typeof Bun !== "undefined";
 // Option 3: We assume a monolithic build where HostProcess imports the same user code.
 
 // For "Open Workers" SDK, usually the user runs *their* script, which imports our SDK.
-// So `bun run index.ts` -> creates Registry -> spawns Host Processes (which run `bun run host-entry.ts`?).
+// The coordinator starts host processes that load the application's actor classes.
 // The `host-entry.ts` must import the user's DO classes.
 
 // Solution: The `HostProcess` is generic, but it needs a mechanism to resolve the DO class.
 // We can pass the module path as an argument.
-// `bun run src/host/process.ts --socket ... --module /path/to/user/code.ts --export MyDO`
+// `node --import tsx src/host/process.ts --socket ... --module /path/to/user/code.ts --export MyActor`
 // Or simpler: The Registry passes the Class *Constructor* to `get()`, but when it's remote...
 // The Registry needs to tell the Remote Host "Load class X from file Y".
 
@@ -62,12 +59,12 @@ const isBun = typeof Bun !== "undefined";
 // If `Host-1` is a separate process spawned by Registry...
 // It should probably load the same bundle or entry point as the main process?
 // Or we spawn the *User's Entry Point* with a flag?
-// `bun run user-script.ts --host --socket ...`
+// `node --import tsx user-script.ts --host --socket ...`
 // This ensures `MyDO` is defined.
 // The user script must have logic to start the Host if the flag is present.
 
 // OR, we use a loader.
-// `bun run src/worker/process.ts --entry /absolute/path/to/user/script.ts`
+// `node --import tsx src/host/process.ts --entry /absolute/path/to/user/script.ts`
 // And `process.ts` imports that script.
 // But we need to know *which* export is the DO class.
 
@@ -180,76 +177,36 @@ async function start() {
         }
     };
 
-    if (isBun) {
-         // Clean up socket
-         if (fs.existsSync(socketPath)) fs.unlinkSync(socketPath);
-         
-         Bun.serve({
-             unix: socketPath,
-             fetch: requestHandler
-         });
-         console.log(`Host Process listening on ${socketPath}`);
-    } else {
-         const http = require("node:http");
-         if (fs.existsSync(socketPath)) fs.unlinkSync(socketPath);
-         
-         const server = http.createServer(async (req: any, res: any) => {
-             // Convert Node Req/Res to Web Request/Response?
-             // Or handle manually. Generic "Request" handling in Node is annoying without adapter.
-             // We can use a minimal adapter.
-             
-             // Simplification: We blindly assume GET/POST with body streaming.
-             // Constructing a Request object from Node req.
-             const protocol = "http";
-             const host = "localhost";
-             const url = new URL(req.url!, `${protocol}://${host}`);
-             
-             const headers = new Headers();
-             for (const [k, v] of Object.entries(req.headers)) {
-                 if (Array.isArray(v)) {
-                     v.forEach(val => headers.append(k, val));
-                 } else if (v) {
-                     headers.set(k, v as string);
-                 }
-             }
+    if (fs.existsSync(socketPath)) fs.unlinkSync(socketPath);
 
-             const webReq = new Request(url, {
-                 method: req.method,
-                 headers: headers,
-                 body: (req.method === 'GET' || req.method === 'HEAD') ? null : req as any,
-                 // duplex: 'half' // required for Node stream body in newer Node types
-                 // @ts-ignore
-                 duplex: 'half'
-             });
+    const server = createServer(async (req, res) => {
+        const url = new URL(req.url ?? "/", "http://localhost");
+        const headers = new Headers();
+        for (const [name, value] of Object.entries(req.headers)) {
+            if (Array.isArray(value)) {
+                value.forEach(item => headers.append(name, item));
+            } else if (value) {
+                headers.set(name, value);
+            }
+        }
 
-             const webRes = await requestHandler(webReq);
+        const webReq = new Request(url, {
+            method: req.method,
+            headers,
+            body: req.method === "GET" || req.method === "HEAD" ? null : req as any,
+            // @ts-expect-error Node.js requires duplex for streamed request bodies.
+            duplex: "half",
+        });
+        const webRes = await requestHandler(webReq);
 
-             res.statusCode = webRes.status;
-             webRes.headers.forEach((v, k) => res.setHeader(k, v));
-             
-             if (webRes.body) {
-                 // Pipe WebStream to Node Response
-                 const reader = webRes.body.getReader();
-                 // @ts-ignore
-                 const pump = async () => {
-                     const { done, value } = await reader.read();
-                     if (done) {
-                         res.end();
-                         return;
-                     }
-                     res.write(value);
-                     pump();
-                 };
-                 pump();
-             } else {
-                 res.end();
-             }
-         });
-         
-         server.listen(socketPath, () => {
-             console.log(`Host Process listening on ${socketPath}`);
-         });
-    }
+        res.statusCode = webRes.status;
+        webRes.headers.forEach((value, name) => res.setHeader(name, value));
+        res.end(webRes.body ? Buffer.from(await webRes.arrayBuffer()) : undefined);
+    });
+
+    server.listen(socketPath, () => {
+        console.log(`Host Process listening on ${socketPath}`);
+    });
 }
 
 start();
