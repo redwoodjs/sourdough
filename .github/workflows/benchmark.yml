@@ -43,8 +43,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: pnpm
-          cache-dependency-path: head/pnpm-lock.yaml
+          package-manager-cache: false
 
       - name: Install proposed dependencies
         working-directory: head
