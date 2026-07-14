@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { OpenDurableObject, DurableObjectState } from "./durable-object/index.js";
+import { DurableObject, DurableObjectState } from "./durable-object/index.js";
 import { ClusterCoordinator } from "./coordinator.js";
 import { encodeEnvelope, decodeEnvelope, RpcEnvelope } from "./durable-object/envelope.js";
 import { createStub, Connection } from "./durable-object/rpc.js";
 
-class CounterDO extends OpenDurableObject {
+class CounterDO extends DurableObject {
   count = 0;
   constructor(state: DurableObjectState, env: any) {
     super(state, env);
@@ -20,17 +20,18 @@ class CounterDO extends OpenDurableObject {
   }
 }
 
-describe("OpenDurableObject Serial Execution", () => {
+describe("DurableObject", () => {
+  it("exposes the compatible ctx and env properties", () => {
+    const state = createState();
+    const env = { GREETING: "hello" };
+    const object = new CounterDO(state, env);
+
+    expect(object.ctx).toBe(state);
+    expect(object.env).toBe(env);
+  });
+
   it("should process requests serially via _internalFetch", async () => {
-    const storage: any = {};
-    const state: DurableObjectState = {
-      id: "test",
-      storage,
-      blockConcurrencyWhile: (cb) => cb(),
-      waitUntil: () => {},
-      acceptWebSocket: () => {},
-      getWebSockets: () => [],
-    };
+    const state = createState();
     const counter = new CounterDO(state, {});
     
     const requests = Array.from({ length: 5 }, () => 
@@ -112,7 +113,18 @@ describe("RPC createStub", () => {
   });
 });
 
-class BlockingDO extends OpenDurableObject {
+function createState(): DurableObjectState {
+  return {
+    id: "test",
+    storage: {} as any,
+    blockConcurrencyWhile: (callback) => callback(),
+    waitUntil: () => {},
+    acceptWebSocket: () => {},
+    getWebSockets: () => [],
+  };
+}
+
+class BlockingDO extends DurableObject {
   initialized = false;
   constructor(state: DurableObjectState, env: any) {
     super(state, env);

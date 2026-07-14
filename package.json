@@ -1,52 +1,14 @@
 {
-  "name": "@redwoodjs/sourdough",
-  "version": "0.1.0",
-  "description": "A portable, self-hostable actor runtime for Node.js and Nub.",
-  "type": "module",
-  "main": "src/index.ts",
-  "exports": {
-    ".": "./src/index.ts"
-  },
-  "files": [
-    "docs",
-    "src",
-    "LICENSE.md",
-    "README.md"
-  ],
+  "name": "sourdough",
+  "private": true,
+  "description": "Portable Cloudflare-compatible bindings for Node.js and Nub.",
   "scripts": {
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "bench": "vitest bench",
-    "typecheck": "tsc --noEmit"
+    "bench": "pnpm --recursive --if-present bench",
+    "test": "pnpm --recursive --if-present test",
+    "typecheck": "pnpm --recursive --if-present typecheck"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/redwoodjs/sourdough.git"
-  },
-  "homepage": "https://github.com/redwoodjs/sourdough#readme",
-  "bugs": {
-    "url": "https://github.com/redwoodjs/sourdough/issues"
-  },
-  "keywords": [
-    "actors",
-    "nodejs",
-    "self-hosted",
-    "sqlite",
-    "stateful"
-  ],
   "engines": {
     "node": ">=24.0.0"
   },
-  "packageManager": "pnpm@10.28.2",
-  "author": "Peter Pistorius",
-  "license": "MIT",
-  "dependencies": {
-    "capnweb": "^0.4.0"
-  },
-  "devDependencies": {
-    "@types/node": "^24.0.0",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.17"
-  }
+  "packageManager": "pnpm@10.28.2"
 }

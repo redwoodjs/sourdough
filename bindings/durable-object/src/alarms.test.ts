@@ -1,11 +1,11 @@
 import { expect, test, describe, beforeAll, afterAll } from "vitest";
-import { OpenDurableObject, ClusterCoordinator as Registry } from "./index.js";
+import { DurableObject, ClusterCoordinator as Registry } from "./index.js";
 import fs from "node:fs";
 import path from "node:path";
 
 const STORAGE_DIR = path.join(process.cwd(), ".test-storage-alarms");
 
-class AlarmDO extends OpenDurableObject {
+class AlarmDO extends DurableObject {
   async fetch(request: Request) {
     const url = new URL(request.url);
     if (url.pathname === "/set") {

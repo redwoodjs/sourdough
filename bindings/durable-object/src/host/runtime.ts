@@ -1,5 +1,5 @@
 import {
-  OpenDurableObject,
+  DurableObject,
   DurableObjectState,
   DurableObjectStorage,
 } from "../durable-object/index.js";
@@ -8,11 +8,11 @@ export class InstanceContainer {
   id: string;
   storage: DurableObjectStorage;
   env: any;
-  instance: OpenDurableObject | null = null;
+  instance: DurableObject | null = null;
   
   #state: DurableObjectStateImpl | null = null;
-  #loadingPromise: Promise<OpenDurableObject> | null = null;
-  #Ctor: OpenDOConstructor<any> | null = null;
+  #loadingPromise: Promise<DurableObject> | null = null;
+  #Ctor: DurableObjectConstructor<any> | null = null;
   #supportsHibernation = false;
 
   #activeRequests = 0;
@@ -32,7 +32,7 @@ export class InstanceContainer {
     this.#lastActive = Date.now();
   }
 
-  async getInstance(Ctor?: OpenDOConstructor<any>): Promise<OpenDurableObject> {
+  async getInstance(Ctor?: DurableObjectConstructor<any>): Promise<DurableObject> {
     this.touch();
     if (this.instance) return this.instance;
     if (this.#loadingPromise) return this.#loadingPromise;
@@ -74,7 +74,7 @@ export class InstanceContainer {
     return this.#loadingPromise;
   }
   
-  async executeFetch(request: Request, instance: OpenDurableObject): Promise<Response> {
+  async executeFetch(request: Request, instance: DurableObject): Promise<Response> {
     this.#activeRequests++;
     this.touch();
     try {
@@ -161,7 +161,7 @@ export class InstanceContainer {
     return sockets;
   }
   
-  #startAlarmCheck(instance: OpenDurableObject) {
+  #startAlarmCheck(instance: DurableObject) {
       if (this.#alarmCheckTimer) return; // Already running
       
       const check = async () => {
@@ -232,7 +232,7 @@ export class InstanceContainer {
 export class DurableObjectStateImpl implements DurableObjectState {
   #container: InstanceContainer;
   #queue = Promise.resolve<any>(undefined);
-  #instance: OpenDurableObject | null = null;
+  #instance: DurableObject | null = null;
   
   // Proxy id to container
   get id() { return this.#container.id; } 
@@ -241,7 +241,7 @@ export class DurableObjectStateImpl implements DurableObjectState {
     this.#container = container;
   }
 
-  _setInstance(instance: OpenDurableObject) {
+  _setInstance(instance: DurableObject) {
     this.#instance = instance;
   }
 
@@ -265,7 +265,7 @@ export class DurableObjectStateImpl implements DurableObjectState {
   }
 }
 
-export type OpenDOConstructor<T extends OpenDurableObject> = new (
+export type DurableObjectConstructor<T extends DurableObject> = new (
   state: DurableObjectState,
   env: any
 ) => T;

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { ClusterCoordinator } from "./coordinator.js";
-import { OpenDurableObject, DurableObjectState } from "./durable-object/index.js";
+import { DurableObject, DurableObjectState } from "./durable-object/index.js";
 
 class MockWebSocket {
   listeners = new Map<string, Set<Function>>();
@@ -53,7 +53,7 @@ describe("Improved Hibernation", () => {
   // Helper to wait
   const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  class SimpleDO extends OpenDurableObject {
+  class SimpleDO extends DurableObject {
     constructor(state: DurableObjectState, env: any) {
       super(state, env);
     }
@@ -63,7 +63,7 @@ describe("Improved Hibernation", () => {
     }
   }
 
-  class HibernatingDO extends OpenDurableObject {
+  class HibernatingDO extends DurableObject {
     lastMessage: string = "";
     constructor(state: DurableObjectState, env: any) {
       super(state, env);
@@ -80,7 +80,7 @@ describe("Improved Hibernation", () => {
     }
   }
 
-  class BlockingDO extends OpenDurableObject {
+  class BlockingDO extends DurableObject {
       constructor(state: DurableObjectState, env: any) {
         super(state, env);
       }

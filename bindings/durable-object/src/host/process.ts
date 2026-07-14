@@ -1,7 +1,7 @@
 import {
-  OpenDurableObject,
+  DurableObject,
 } from "../durable-object/index.js";
-import { InstanceContainer, OpenDOConstructor } from "./runtime.js";
+import { InstanceContainer, DurableObjectConstructor } from "./runtime.js";
 import { SqliteStorage, InMemoryStorage, getSqliteDriver } from "./storage.js"; // Needs persistence
 import { createServer } from "node:http";
 import path from "node:path";
@@ -15,7 +15,7 @@ import fs from "node:fs";
 // Option 2: HostProcess is started with the User Code entry point as an argument?
 // Option 3: We assume a monolithic build where HostProcess imports the same user code.
 
-// For "Open Workers" SDK, usually the user runs *their* script, which imports our SDK.
+// The user runs an application entry point that imports this package.
 // The coordinator starts host processes that load the application's actor classes.
 // The `host-entry.ts` must import the user's DO classes.
 
@@ -77,7 +77,7 @@ import fs from "node:fs";
 // We will allow `process.ts` to accept `--import <file>` arguments.
 // It will import those files.
 // We assume the classes are registered in a global map?
-// OR, `OpenDurableObject` classes register themselves?
+// OR, `DurableObject` classes register themselves?
 
 // Let's implement a simple `ClassRegistry` in `durable-object/index.ts`?
 // No, that pollutes the base class.

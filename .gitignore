@@ -1,8 +1,8 @@
 node_modules
 *.sqlite
 *.sock
-.test-storage
-.bench-storage
+.test-storage*
+.bench-storage*
 .serve-test-storage*
 .storage
 coverage

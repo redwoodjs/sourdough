@@ -1,60 +1,62 @@
 # Sourdough
 
-> Portable, self-hostable stateful actors for Node.js and Nub.
+> Pick the Cloudflare-compatible bindings you need and run them on Node.js or Nub.
 
-Sourdough is an experimental actor runtime for building stateful applications
-that can run on your own infrastructure. Its API is modeled after Cloudflare's
-Durable Objects, with SQLite persistence and support for running many isolated
-actor instances across a pool of local host processes.
+Sourdough is a collection of independent, self-hostable binding implementations.
+Each binding lives in its own package, so an application can install one binding
+without pulling in the rest of the platform.
 
-Sourdough is an independent project and is not affiliated with or endorsed by
-Cloudflare, Inc. “Cloudflare” and “Durable Objects” are trademarks of
-Cloudflare, Inc.
+## Bindings
 
-## Project status
+| Binding | Package | Status |
+| --- | --- | --- |
+| [Durable Object](bindings/durable-object) | `@redwoodjs/sourdough-durable-object` | Partial |
 
-Sourdough is early-stage software extracted from an experimental RedwoodSDK
-branch. Node.js 24 is the current development runtime. Nub support is planned
-as the Nub runtime takes shape.
+See the [complete binding support matrix](docs/support-matrix.md) for every
+binding exposed by the Cloudflare Developer Platform and its implementation
+status in Sourdough.
 
-## Features
+## Install only what you need
 
-- SQLite-backed key-value and SQL storage
-- Serialized execution for each actor instance
-- Alarms and background work with `waitUntil`
-- RPC stubs for calling actor methods
-- WebSocket tracking, hibernation, and broadcasting
-- Optional multi-process hosting over Unix domain sockets
-
-## Usage
-
-Define a stateful actor:
+```bash
+pnpm add @redwoodjs/sourdough-durable-object
+```
 
 ```typescript
-import { OpenDurableObject } from "@redwoodjs/sourdough";
+import { DurableObject } from "@redwoodjs/sourdough-durable-object";
 
-export class Counter extends OpenDurableObject {
+export class Counter extends DurableObject {
   async fetch() {
-    const value = ((await this.storage.get<number>("value")) ?? 0) + 1;
-    await this.storage.put("value", value);
-
+    const value = ((await this.ctx.storage.get<number>("value")) ?? 0) + 1;
+    await this.ctx.storage.put("value", value);
     return new Response(String(value));
   }
 }
 ```
 
-Create a coordinator and get an actor stub:
+## Repository layout
 
-```typescript
-import { ClusterCoordinator } from "@redwoodjs/sourdough";
-import { Counter } from "./counter.js";
-
-const coordinator = new ClusterCoordinator();
-const counter = await coordinator.get("counter-1", Counter);
-const response = await counter.fetch(new Request("http://localhost"));
-
-console.log(await response.text());
+```text
+bindings/
+  durable-object/   # Durable Object API, storage, host runtime, tests, and docs
+  kv/               # future KV binding package
+  r2/               # future R2 binding package
+  ...
+docs/
+  support-matrix.md # status of every binding
 ```
+
+Every directory under `bindings/` is intended to be independently installable,
+testable, and documented. Cross-binding orchestration should compose these
+packages rather than make them depend on one large umbrella package.
+
+See [Binding package architecture](docs/architecture.md) for the conventions a
+new binding should follow.
+
+## Runtime support
+
+Node.js 24 is the current development runtime. Nub support is planned as the
+Nub runtime takes shape.
 
 ## Development
 
@@ -65,10 +67,12 @@ pnpm typecheck
 pnpm test
 ```
 
-## Documentation
+## Independence and compatibility
 
-- [Feature matrix](docs/matrix.md)
-- [Host process model](docs/host-process-model.md)
+Sourdough aims for API compatibility so application code can use familiar
+binding APIs outside Cloudflare's infrastructure. Sourdough is independent and
+is not affiliated with or endorsed by Cloudflare, Inc. “Cloudflare” and
+“Durable Objects” are trademarks of Cloudflare, Inc.
 
 ## License
 

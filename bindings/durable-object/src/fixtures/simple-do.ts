@@ -1,6 +1,6 @@
-import { OpenDurableObject } from "../durable-object/index.js";
+import { DurableObject } from "../durable-object/index.js";
 
-export class SimpleDO extends OpenDurableObject {
+export class SimpleDO extends DurableObject {
   async fetch(request: Request) {
       const url = new URL(request.url);
       if (url.pathname === "/sayHello") {

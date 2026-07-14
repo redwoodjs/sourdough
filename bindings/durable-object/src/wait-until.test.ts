@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { OpenDurableObject, DurableObjectState } from "./durable-object/index.js";
+import { DurableObject, DurableObjectState } from "./durable-object/index.js";
 import { ClusterCoordinator } from "./coordinator.js";
 
-class WaitUntilDO extends OpenDurableObject {
+class WaitUntilDO extends DurableObject {
   processed = false;
 
   async fetch(request: Request): Promise<Response> {

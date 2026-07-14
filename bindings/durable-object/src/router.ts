@@ -1,7 +1,7 @@
-import { OpenDurableObject } from "./durable-object/index.js";
+import { DurableObject } from "./durable-object/index.js";
 import { ClusterCoordinator } from "./coordinator.js";
 
-export function route<T extends OpenDurableObject>(
+export function route<T extends DurableObject>(
   registry: ClusterCoordinator,
   Ctor: new (state: any, env: any) => T,
   idExtractor: (req: Request) => string | null = (req) =>

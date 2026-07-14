@@ -44,12 +44,12 @@ export interface DurableObjectState {
   getWebSockets(tag?: string): WebSocket[];
 }
 
-export abstract class OpenDurableObject {
+export abstract class DurableObject<Env = unknown> {
   #state: DurableObjectState;
-  #env: any;
+  #env: Env;
   #waitUntilPromises: Promise<any>[] = [];
 
-  constructor(state: DurableObjectState, env: any) {
+  constructor(state: DurableObjectState, env: Env) {
     this.#state = state;
     this.#env = env;
   }
@@ -64,6 +64,10 @@ export abstract class OpenDurableObject {
 
   get ctx() {
     return this.#state;
+  }
+
+  get env(): Env {
+    return this.#env;
   }
 
   get storage() {

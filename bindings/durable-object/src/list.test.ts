@@ -1,8 +1,8 @@
 import { expect, test, describe } from "vitest";
 import { ClusterCoordinator as Registry } from "./coordinator.js";
-import { OpenDurableObject, DurableObjectState } from "./durable-object/index.js";
+import { DurableObject, DurableObjectState } from "./durable-object/index.js";
 
-class ListDO extends OpenDurableObject {
+class ListDO extends DurableObject {
   async fetch(request: Request) {
     return new Response("OK");
   }

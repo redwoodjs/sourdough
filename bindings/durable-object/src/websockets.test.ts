@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { OpenDurableObject } from "./durable-object/index.js";
+import { DurableObject } from "./durable-object/index.js";
 import { ClusterCoordinator } from "./coordinator.js";
 
 // Mock WebSocket
@@ -16,7 +16,7 @@ class MockWebSocket extends EventTarget {
 // @ts-ignore
 globalThis.WebSocket = MockWebSocket;
 
-class WebSocketDO extends OpenDurableObject {
+class WebSocketDO extends DurableObject {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === "/connect") {

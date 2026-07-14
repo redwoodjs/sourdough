@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { ClusterCoordinator as Registry } from "./coordinator.js";
-import { OpenDurableObject, DurableObjectState } from "./durable-object/index.js";
+import { DurableObject, DurableObjectState } from "./durable-object/index.js";
 
 // This looks exactly like a Cloudflare Durable Object
-class CloudflareStyleDO extends OpenDurableObject {
+class CloudflareStyleDO extends DurableObject {
   async fetch(request: Request) {
     const { pathname } = new URL(request.url);
     

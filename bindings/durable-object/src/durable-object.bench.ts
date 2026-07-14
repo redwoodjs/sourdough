@@ -1,13 +1,13 @@
 import { bench } from "vitest";
-import { OpenDurableObject, ClusterCoordinator as OpenDurableObjectRegistry, route } from "./index.js";
+import { DurableObject, ClusterCoordinator as DurableObjectCoordinator, route } from "./index.js";
 import path from "node:path";
 import fs from "node:fs";
 
 // Setup
 const STORAGE_DIR = path.join(process.cwd(), ".bench-storage");
-const registry = new OpenDurableObjectRegistry({ storageDir: STORAGE_DIR });
+const registry = new DurableObjectCoordinator({ storageDir: STORAGE_DIR });
 
-class BenchmarkDO extends OpenDurableObject {
+class BenchmarkDO extends DurableObject {
   async fetch(request: Request) {
     const url = new URL(request.url);
     if (url.pathname === "/kv") {

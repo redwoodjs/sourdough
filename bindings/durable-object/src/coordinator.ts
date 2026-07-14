@@ -1,5 +1,5 @@
 import {
-  OpenDurableObject,
+  DurableObject,
 } from "./durable-object/index.js";
 import { spawn, type ChildProcess } from "node:child_process";
 import path from "node:path";
@@ -7,7 +7,7 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
   InstanceContainer,
-  OpenDOConstructor
+  DurableObjectConstructor
 } from "./host/runtime.js";
 import {
   SqliteStorage,
@@ -199,9 +199,9 @@ export class ClusterCoordinator {
       }
   }
 
-  async get<T extends OpenDurableObject>(
+  async get<T extends DurableObject>(
     id: string,
-    Ctor: OpenDOConstructor<T>
+    Ctor: DurableObjectConstructor<T>
   ): Promise<T> {
     // 1. Check if we should run locally (no host processes configured)
     if (this.#hosts.length === 0) {
@@ -250,9 +250,9 @@ export class ClusterCoordinator {
     return new RemoteStub(id, host.socketPath, modulePath, Ctor.name) as unknown as T;
   }
   
-  async #getLocal<T extends OpenDurableObject>(
+  async #getLocal<T extends DurableObject>(
     id: string,
-    Ctor: OpenDOConstructor<T>
+    Ctor: DurableObjectConstructor<T>
   ): Promise<T> {
     let container = this.#containers.get(id);
     if (!container) {

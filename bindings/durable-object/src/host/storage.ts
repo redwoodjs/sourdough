@@ -36,11 +36,11 @@ export async function getSqliteDriver(): Promise<any> {
       const [major, minor] = nodeVersion.split(".").map(Number);
       if (major < 22 || (major === 22 && minor < 5)) {
         throw new Error(
-          `OpenDurableObject Persistence Error: node:sqlite is not available in Node.js ${nodeVersion}. Please upgrade to v22.5.0 or later.`
+          `DurableObject Persistence Error: node:sqlite is not available in Node.js ${nodeVersion}. Please upgrade to v22.5.0 or later.`
         );
       }
       throw new Error(
-        `OpenDurableObject Persistence Error: node:sqlite is missing (Error: ${e.message}). If you are using Node.js, ensure you run with the '--experimental-sqlite' flag.`
+        `DurableObject Persistence Error: node:sqlite is missing (Error: ${e.message}). If you are using Node.js, ensure you run with the '--experimental-sqlite' flag.`
       );
     }
     throw new Error(

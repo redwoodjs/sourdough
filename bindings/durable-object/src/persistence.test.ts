@@ -1,11 +1,11 @@
 import { expect, test, describe, beforeAll, afterAll } from "vitest";
-import { OpenDurableObject, DurableObjectState, ClusterCoordinator as Registry } from "./index.js";
+import { DurableObject, DurableObjectState, ClusterCoordinator as Registry } from "./index.js";
 import fs from "node:fs";
 import path from "node:path";
 
 const STORAGE_DIR = path.join(process.cwd(), ".test-storage-persistence");
 
-class PersistenceDO extends OpenDurableObject {
+class PersistenceDO extends DurableObject {
   async fetch(request: Request) {
     const url = new URL(request.url);
     const key = url.searchParams.get("key");

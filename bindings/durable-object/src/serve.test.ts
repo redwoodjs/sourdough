@@ -2,10 +2,10 @@ import fs from "node:fs";
 import type { AddressInfo } from "node:net";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { OpenDurableObject } from "./durable-object/index.js";
+import { DurableObject } from "./durable-object/index.js";
 import { serve, type Env, type SourdoughServer } from "./serve.js";
 
-class ServeTestActor extends OpenDurableObject {
+class ServeTestActor extends DurableObject {
   async fetch(request: Request) {
     if (new URL(request.url).pathname === "/count") {
       const count = ((await this.storage.get<number>("count")) ?? 0) + 1;

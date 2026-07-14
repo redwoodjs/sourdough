@@ -32,7 +32,7 @@ describe("Single Machine Process Model", () => {
     // UNLESS we use the Router or create a typed Proxy.
     
     // Wait, `RemoteStub` only has `_internalFetch`.
-    // The `OpenDurableObject` defines `_internalFetch`.
+    // The `DurableObject` defines `_internalFetch`.
     // BUT the user usually accesses methods via `connection.createStub` or assumes local usage?
     
     // If I use `registry.get`, in the OLD local model, I got the real instance.
