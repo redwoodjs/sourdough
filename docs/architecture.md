@@ -16,7 +16,7 @@ Each binding lives at `bindings/<binding-name>/` and owns:
 bindings/<binding-name>/
   README.md
   docs/
-    compatibility.md
+    support-matrix.md
   src/
 ```
 
@@ -36,7 +36,7 @@ The root `package.json` maps each binding directory to a public export:
 A binding module must:
 
 1. expose the same public API names as the Cloudflare binding where practical;
-2. document supported and missing API surface in `docs/compatibility.md`;
+2. document supported and missing API surface in `docs/support-matrix.md`;
 3. avoid importing unrelated binding modules;
 4. keep storage and transport adapters behind the binding's public API;
 5. export its public surface from its own `src/index.ts`;

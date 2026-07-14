@@ -11,15 +11,23 @@ Applications import only the binding modules they use.
 pnpm add @redwoodjs/sourdough
 ```
 
-## Bindings
+## Tier 0 bindings
 
 | Binding | Import | Status |
 | --- | --- | --- |
-| [Durable Objects](bindings/durable-object) | `@redwoodjs/sourdough/durable-object` | Partial |
+| Environment variables | `@redwoodjs/sourdough/environment-variables` | Planned |
+| Secrets | `@redwoodjs/sourdough/secrets` | Planned |
+| Service binding | `@redwoodjs/sourdough/service-binding` | Planned |
+| [Durable Object](bindings/durable-object) | `@redwoodjs/sourdough/durable-object` | Partial |
+| KV | `@redwoodjs/sourdough/kv` | Planned |
+| R2 | `@redwoodjs/sourdough/r2` | Planned |
+| D1 | `@redwoodjs/sourdough/d1` | Planned |
+| Queue | `@redwoodjs/sourdough/queue` | Planned |
+| Assets | `@redwoodjs/sourdough/assets` | Planned |
 
-See the [complete binding support matrix](docs/support-matrix.md) for every
-binding exposed by the Cloudflare Developer Platform and its implementation
-status in Sourdough.
+Tier 0 is the minimum binding set Sourdough intends to support. See the
+[complete binding support matrix](docs/support-matrix.md) for detailed targets
+and the uncategorized Cloudflare bindings.
 
 ## Import only what you need
 

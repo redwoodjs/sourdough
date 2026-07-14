@@ -1,6 +1,8 @@
-# Durable Object compatibility
+# Durable Object support matrix
 
-**Overall status: Partial**
+- **Tier:** 0
+- **Overall status:** Partial
+- **Subpath:** `@redwoodjs/sourdough/durable-object`
 
 This document tracks the API and behavioral compatibility of
 `@redwoodjs/sourdough/durable-object` with Cloudflare's Durable Object API. The

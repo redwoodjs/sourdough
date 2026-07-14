@@ -38,11 +38,11 @@ names should remain compatible.
 
 ## Documentation
 
-- [Compatibility details](docs/compatibility.md)
+- [Support matrix](docs/support-matrix.md)
 - [Host process model](docs/host-process-model.md)
 - [Repository-wide support matrix](../../docs/support-matrix.md)
 
 ## Status
 
-This binding module is experimental and partially compatible. See the
-compatibility document for implemented behavior and known gaps.
+This binding module is experimental and partially compatible. See the support
+matrix for implemented behavior and known gaps.
