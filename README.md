@@ -2,10 +2,17 @@
 
 > Pick the Cloudflare-compatible bindings you need and run them on Node.js or Nub.
 
+> [!WARNING]
+> **Work in progress.** Sourdough is experimental, incomplete, and not yet
+> published to npm. The APIs, import paths, and support targets may change.
+
 Sourdough is one package with a subpath export for each self-hostable binding.
 Applications import only the binding modules they use.
 
-## Install
+## Installation
+
+Sourdough is not yet published. Once an initial release is available, it will
+be installed with:
 
 ```bash
 pnpm add @redwoodjs/sourdough

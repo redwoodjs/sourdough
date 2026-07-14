@@ -1,6 +1,7 @@
 {
   "name": "@redwoodjs/sourdough",
   "version": "0.1.0",
+  "private": true,
   "description": "Portable Cloudflare-compatible bindings for Node.js and Nub.",
   "type": "module",
   "exports": {

@@ -3,7 +3,12 @@
 A self-hostable implementation of the Cloudflare Durable Object API for Node.js
 and, eventually, Nub.
 
-## Install
+> [!WARNING]
+> This binding is a work in progress and has not been published to npm.
+
+## Installation
+
+Once Sourdough is published:
 
 ```bash
 pnpm add @redwoodjs/sourdough
