@@ -17,6 +17,14 @@
       "types": "./dist/bindings/durable-object/src/providers/node/index.d.ts",
       "import": "./dist/bindings/durable-object/src/providers/node/index.js"
     },
+    "./kv": {
+      "types": "./dist/bindings/kv/src/index.d.ts",
+      "import": "./dist/bindings/kv/src/index.js"
+    },
+    "./kv/node": {
+      "types": "./dist/bindings/kv/src/providers/node/index.d.ts",
+      "import": "./dist/bindings/kv/src/providers/node/index.js"
+    },
     "./r2": {
       "types": "./dist/bindings/r2/src/index.d.ts",
       "import": "./dist/bindings/r2/src/index.js"
