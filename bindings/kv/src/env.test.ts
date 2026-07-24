@@ -5,7 +5,7 @@ import { defineEnv } from "../../../src/env.js";
 import { KVNamespace, kv } from "./index.js";
 import { sqlite } from "./providers/node/index.js";
 
-const defaultStorageDir = path.resolve(".sourdough", "kv", "DEFAULT_TEST_NAMESPACE");
+const defaultStorageDir = path.resolve(".sourdough", "kv", "CACHE");
 
 describe("KV env composition", () => {
   afterEach(async () => void rm(defaultStorageDir, { recursive: true, force: true }));
