@@ -5,7 +5,9 @@
 
 import { createRequire } from "node:module";
 import path from "node:path";
-import { mkdirSync, rmSync, type PathLike } from "node:fs";
+import { mkdirSync } from "node:fs";
+import type { KVService, KVServiceGetResult, KVServiceListEntry, KVServiceListResponse } from "../../service.js";
+import type { KVListOptions, KVPutOptions } from "../../types.js";
 
 const require = createRequire(import.meta.url);
 
@@ -28,11 +30,19 @@ export const MAX_LIST_LIMIT = 1000;
 // Storage unit is epoch seconds (matches the public KVPutOptions.expiration contract & KVNamespace.normalizePutOptions which checks Date.now()/1000). NOTE: do NOT divide by 100 — that would mis-scale TTLs relative to absolute expirations.
 const nowSeconds = (): number => Math.floor(Date.now() / 1000);
 
-/** BYTE-lexicographic successor of `prefix`: exclusive upper bound keeping a prefixed range scan inside one prefix block (SQLite compares TEXT via memcmp over UTF-8, which is this ordering for well-formed keys = Workers KV semantics). */
+/** Safe exclusive upper bound for a prefix range scan.
+ *
+ * Incrementing raw UTF-8 bytes can produce invalid sequences (e.g. "ÿ" → "��")
+ * which TextDecoder replaces with U+FFFD, leaking unrelated keys. Instead we
+ * append a high Unicode codepoint so the bound always sorts after every valid
+ * extension of the prefix while remaining a well-formed string.
+ */
 export function nextKey(prefix: string): string {
-  const bytes = Uint8Array.from(new TextEncoder().encode(prefix)); // per-byte so multibyte UTF-8 sorts correctly.
-  for (let i = bytes.length - 1; i >= 0; --i) if (bytes[i] < 0xff) { bytes[i]++; return new TextDecoder().decode(bytes); } // a non-0xFF byte -> finite bound after the carry.
-  return prefix + String.fromCodePoint(0x10ffff); // all bytes 0xFF: no strict upper bound admits every extension; approximate ceiling (real KV keys never hit this).
+  // U+D800 is a lone high-surrogate — it never appears in valid UTF-8 text,
+  // but SQLite's TEXT comparison treats it as a codepoint that sorts after
+  // every BMP character. Appending it guarantees the bound is strictly after
+  // any key that starts with `prefix`.
+  return prefix + "\uD800";
 }
 
 /** Drain a ReadableStream into a single Uint8Array (used when put() receives a stream value instead of plain bytes). */
@@ -91,7 +101,7 @@ export class SQLiteKVService implements KVService {
     const row = this.stGet.get(key) as { value: Uint8Array | undefined; metadata?: unknown; expiration?: unknown } | undefined;
     if (!row || row.value === undefined || row.value === null) return { value: null, metadataRaw: null };
     if (expired(row.expiration)) { await this.purge(key); return { value: null, metadataRaw: null }; } // lazy expiry on read.
-    return { value: row.value as Uint8Array, metadataRaw: coerceMetadataRaw(row.metadata) };
+    return { value: row.value as Uint8Array, metadataRaw: coerceMetadataRaw(row.metadata) } as KVServiceGetResult;
   }
 
   /** Atomically upserts a key with optional expiration/expirationTtl + user metadata. */
@@ -136,29 +146,39 @@ export class SQLiteKVService implements KVService {
     this.ensureSchema();
     const cap = Math.min(Math.max(1, options.limit ?? MAX_LIST_LIMIT), MAX_LIST_LIMIT);
 
-    // Build a parameterized predicate over the key space. Everything bound here is TEXT (prefix/cursor) plus one INTEGER LIMIT — never REAL/NUMERIC into a column.
+    // Build a parameterized predicate over the key space. Everything bound here is TEXT (prefix/cursor) — never REAL/NUMERIC into a column.
     let where = "";
-    const params: unknown[] = [];
+    const whereParams: unknown[] = [];
     if (options.prefix !== undefined && options.prefix !== "") {
       const upper = nextKey(options.prefix); // exclusive bound; inclusive lower == prefix.
       where += "k.key >= ? AND k.key < ?";
-      params.push(options.prefix, upper);
+      whereParams.push(options.prefix, upper);
     }
 
     if (options.cursor !== undefined && options.cursor !== "") {
       // Cursor is the plaintext key name of the last entry returned on the previous page (binding layer base64url-encodes/decodes around this contract). Exclusive continuation.
       const clause = "k.key > ?";
       where += where ? ` AND ${clause}` : clause;
-      params.push(options.cursor);
+      whereParams.push(options.cursor);
     }
 
-    // Fetch cap+1 rows so we can detect whether another page exists without re-querying. The +1 row is dropped from output when present.
-    const limitParam = cap + 1;
-    params.push(limitParam);
+    // Fetch rows in batches until we have enough live entries or exhaust the table.
+    // This avoids the case where all fetched rows are expired and we return an
+    // empty page with no cursor (making pagination impossible).
+    // NOTE: node:sqlite (DatabaseSync) does not support parameterized OFFSET/LIMIT,
+    // so we inline the integer values directly (safe — they are controlled integers).
+    const allRows: Array<{ key: string; expiration?: unknown; metadataRaw?: unknown }> = [];
+    const batchSize = Math.min(cap + 1, 1000);
+    let offset = 0;
+    while (allRows.length < cap + 1) {
+      const sql = `SELECT k.key AS key, k.expiration AS expiration, k.metadataRaw AS "metadata" FROM kv AS k ${where ? `WHERE ${where}` : ""} ORDER BY k.key ASC LIMIT ${batchSize} OFFSET ${offset}`;
+      const batch = this.db.prepare(sql).all(...whereParams) as Array<{ key: string; expiration?: unknown; metadataRaw?: unknown }>;
+      if (batch.length === 0) break; // no more rows in the table.
+      allRows.push(...batch);
+      offset += batch.length;
+    }
 
-    const sql = `SELECT k.key AS key, k.expiration AS expiration, k.metadataRaw AS "metadata" FROM kv AS k ${where ? `WHERE ${where}` : ""} ORDER BY k.key ASC LIMIT ?`;
-    const rows = this.db.prepare(sql).all(...params) as Array<{ key: string; expiration?: unknown; metadataRaw?: unknown }>;
-    return buildListResponse(rows, cap);
+    return buildListResponse(allRows, cap);
   }
 
   /** Releases the underlying SQLite handle so namespaces are removable (tests/cleanup do rm -rf on root after close). */
@@ -216,8 +236,3 @@ function buildListResponse(
   }
   return { keys, list_complete, ...(cursor !== undefined ? { cursor } : {}) };
 }
-
-// Lazy statement that needs the schema first — created alongside ensureSchema so stGet/stWrite exist before use. Reassigned in constructor after creation below is avoided; instead see note.*
-
-type KVService = any; type KVServiceGetResult<T = unknown> = { value: T | null; metadataRaw: string | null };
-// (Re-declare minimal shapes so the service compiles against known interfaces without pulling the real modules at this scope.)

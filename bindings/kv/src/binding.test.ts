@@ -60,34 +60,36 @@ describe("KVNamespace (Cloudflare-compatible surface)", () => {
     expect(withMeta.metadata).toEqual({ source: "env-test" });
   });
 
-  it("rejects past expiration and expires entries lazily once alive", async () => {
+  it("rejects past expiration and TTLs under the 60-second minimum", async () => {
     const now = Math.floor(Date.now() / 1000);
 
     // An already-past expiration is rejected (Cloudflare treats this as an error).
     await expect(namespace.put("past", "gone", { expiration: now - 5 })).rejects.toThrow(/future/i);
 
-    // A freshly written TTL entry reads immediately...
-    await namespace.put("ephemeral", "still here", { expirationTtl: 1 });
-    const before = (await namespace.get("ephemeral"))!; // default text.
-    expect(before).toBe("still here");
+    // Expiration less than 60 seconds in the future is rejected.
+    await expect(namespace.put("soon", "gone", { expiration: now + 30 })).rejects.toThrow(/60/i);
 
-    // ...and disappears from both read and listing once the TTL elapses (lazy expiry).
-    await new Promise(r => setTimeout(r, 1_700));
-    expect(await namespace.get("ephemeral")).toBeNull();
-    const listed = (await namespace.list({})) as KVNamespaceListResponse;
-    expect(listed.keys.map(k => k.name)).not.toContain("ephemeral");
+    // TTL under 60 seconds is rejected.
+    await expect(namespace.put("short", "gone", { expirationTtl: 1 })).rejects.toThrow(/60/i);
+    await expect(namespace.put("nan", "gone", { expirationTtl: NaN })).rejects.toThrow(/60/i);
+    await expect(namespace.put("neg", "gone", { expirationTtl: -1 })).rejects.toThrow(/60/i);
+
+    // A valid TTL (>= 60s) is accepted.
+    await namespace.put("valid", "still here", { expirationTtl: 60 });
+    const before = (await namespace.get("valid"))!; // default text.
+    expect(before).toBe("still here");
   });
 
-  it("deletes keys and reports whether anything existed", async () => {
-    expect(await namespace.delete(["only"])).toBe(false);
+  it("deletes a single key (Workers KV signature)", async () => {
+    // delete() returns void (Workers KV signature).
+    await namespace.delete("only");
 
     await namespace.put("a", "1");
-    expect(await namespace.delete(["a"])).toBe(true);
+    await namespace.delete("a");
     expect(await namespace.get("a")).toBeNull();
 
-    // Bulk delete across mixed presence: true when at least one existed.
-    await namespace.put("b", "2");
-    expect(await namespace.delete(["missing", "b"])).toBe(true);
+    // Deleting a missing key is a no-op (does not throw).
+    await namespace.delete("missing");
   });
 
   it("lists keys lexicographically, paginated by an opaque cursor token", async () => {

@@ -34,7 +34,9 @@ export class KVNamespace {
   constructor(private readonly service: KVService) {}
 
   /** Reads a value using the given read `type` and decodes it accordingly. Returns null on miss. */
-  get<T extends KVValueType>(key: string, type: T): Promise<GetResult<T> | null>;
+  get<T extends KVValueType>(key: string, type: T): Promise<GetResult<T>>;
+  /** Reads a value with options. When `type` is omitted, defaults to `"text"`. */
+  get(key: string, options?: KVGetOptions): Promise<string | null>;
   /** Reads one key as `"text"` (the default). Pass an options object (or bare type literal) to decode differently. */
   get(key: string, options?: KVGetOptions | KVValueType): Promise<string | null>;
   async get(
@@ -49,33 +51,38 @@ export class KVNamespace {
     return decodeValue(result.value, type);
   }
 
+  /** Reads a value with metadata. Pass a bare type literal or options object. */
+  getWithMetadata<M = unknown>(key: string, type: KVValueType): Promise<KVNamespaceGetWithMetaResult<unknown, M>>;
+  /** Reads a value with metadata using options. Defaults to `"text"`. */
+  getWithMetadata<M = unknown>(key: string, options?: KVGetOptions): Promise<KVNamespaceGetWithMetaResult<unknown, M>>;
   async getWithMetadata<M = unknown>(
     key: string,
-    options?: KVGetOptions,
+    typeOrOptions?: KVValueType | KVGetOptions,
   ): Promise<KVNamespaceGetWithMetaResult<unknown, M>> {
-    const type = (options?.type) ?? "text";
+    const type = typeof typeOrOptions === "string"
+      ? typeOrOptions
+      : (typeOrOptions?.type ?? "text");
     assertKey(key);
 
     const result = await this.service.get(key);
     if (!result || result.value === null) return { value: null, metadata: null };
     const decoded = await decodeValue(result.value, type);
-    return { value: decoded, metadata: parseMetadata<M>(result.metadataRaw ?? "") };
+    return { value: decoded as unknown, metadata: parseMetadata<M>(result.metadataRaw ?? "") };
   }
 
   async put(
     key: string,
-    value: string | ArrayBuffer | Uint8Array,
+    value: string | ArrayBuffer | ArrayBufferView | ReadableStream<Uint8Array>,
     options?: KVPutOptions,
   ): Promise<void> {
     assertKey(key);
-    const bytes = toBytes(value);
+    const bytes = await toBytesOrStream(value);
     await this.service.put(key, bytes, normalizePutOptions(options));
   }
 
-  async delete(keys: string | string[]): Promise<boolean> {
-    const list = Array.isArray(keys) ? keys : [keys];
-    for (const k of list) assertKey(k);
-    return this.service.delete(list);
+  async delete(key: string): Promise<void> {
+    assertKey(key);
+    await this.service.delete([key]);
   }
 
   async list<M = unknown>(options?: KVListOptions): Promise<KVNamespaceListResponse<M>> {
@@ -134,11 +141,43 @@ export function assertKey(key: string): void {
   }
 }
 
-export function toBytes(value: string | ArrayBuffer | Uint8Array): Uint8Array {
+export function toBytes(value: string | ArrayBuffer | ArrayBufferView): Uint8Array {
   if (typeof value === "string") return encoder.encode(value);
   if (value instanceof Uint8Array) return value; // pass-through owned bytes.
-  const copied = (value as ArrayBuffer).slice(0, value.byteLength); // compact standalone copy.
-  return new Uint8Array(copied);
+  if (value instanceof ArrayBuffer) {
+    const copied = value.slice(0, value.byteLength); // compact standalone copy.
+    return new Uint8Array(copied);
+  }
+  // ArrayBufferView (DataView, Int8Array, etc.) — copy the underlying bytes.
+  return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+}
+
+export async function toBytesOrStream(
+  value: string | ArrayBuffer | ArrayBufferView | ReadableStream<Uint8Array>,
+): Promise<Uint8Array> {
+  if (value instanceof ReadableStream) {
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    const reader = value.getReader();
+    try {
+      while (true) {
+        const { done, value: chunk } = await reader.read();
+        if (done || !chunk) break;
+        chunks.push(chunk);
+        total += chunk.byteLength;
+      }
+    } finally {
+      void reader.releaseLock();
+    }
+    const out = new Uint8Array(total);
+    let offset = 0;
+    for (const c of chunks) {
+      out.set(c, offset);
+      offset += c.byteLength;
+    }
+    return out;
+  }
+  return toBytes(value);
 }
 
 export async function decodeValue(
@@ -251,11 +290,25 @@ function decodeCursor(cursor: string): string | undefined {
 
 function normalizePutOptions(options?: KVPutOptions): KVPutOptions | undefined {
   if (!options) return undefined;
-  const hasExpiration = options.expiration !== undefined;
-  const hasTtl = options.expirationTtl !== undefined;
+  const expiration = options.expiration;
+  const ttl = options.expirationTtl;
+  const hasExpiration = expiration !== undefined;
+  const hasTtl = ttl !== undefined;
   if (hasExpiration && hasTtl) throw new Error("KV put cannot specify both `expiration` and `expirationTtl`");
-  if (options.expiration !== undefined && (!Number.isFinite(options.expiration) || options.expiration <= Date.now() / 1000)) {
-    throw new RangeError("KV expiration must be a future Unix timestamp in seconds");
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const minExpiration = nowSeconds + 60; // Cloudflare enforces a 60-second minimum.
+  if (hasExpiration) {
+    if (!Number.isFinite(expiration!)) {
+      throw new RangeError("KV expiration must be a finite Unix timestamp in seconds");
+    }
+    if (expiration! < minExpiration) {
+      throw new RangeError("KV expiration must be at least 60 seconds in the future");
+    }
+  }
+  if (hasTtl) {
+    if (!Number.isFinite(ttl!) || ttl! < 60) {
+      throw new RangeError("KV expirationTtl must be at least 60 seconds");
+    }
   }
   return options;
 }
